@@ -5,6 +5,7 @@ class ViewController: UIViewController, CameraDelegate {
     
     @IBOutlet weak var renderView: RenderView!
     @IBOutlet weak var FPSLabel: UILabel!
+    @IBOutlet weak var recordButton: UIButton!
     var camera:Camera!
     var saturation = SaturationAdjustment()
     var brightness = BrightnessAdjustment()
@@ -15,6 +16,8 @@ class ViewController: UIViewController, CameraDelegate {
         // Do any additional setup after loading the view, typically from a nib.
         
         do {
+            recordButton.layer.cornerRadius = 8
+            
             camera = try Camera(sessionPreset: .vga640x480)
             camera.delegate = self
             camera.runBenchmark = true
@@ -33,9 +36,7 @@ class ViewController: UIViewController, CameraDelegate {
     }
     
     func frameTime(average: Double, current: Double) {
-        print("Average frame time : \(average)) ms")
-        print("Current frame time : \(current) ms")
-        let fps = Int(1000.0/average)
+        let fps = Int(1000.0/current)
         DispatchQueue.main.async {
             self.FPSLabel.text = "FPS: \(fps)"
         }
@@ -46,6 +47,14 @@ class ViewController: UIViewController, CameraDelegate {
         // Dispose of any resources that can be recreated.
     }
 
+    @IBAction func toggleRecording(_ sender: UIButton) {
+        camera.isRecording = !camera.isRecording
+        let title = camera.isRecording ? "Stop Recording" : "Record Video"
+        DispatchQueue.main.async {
+            sender.setTitle(title, for: .normal)
+        }
+    }
+    
     @IBAction func saturationChanged(_ sender: Any) {
         guard let slider = sender as? UISlider else { return }
         saturation.saturation = slider.value

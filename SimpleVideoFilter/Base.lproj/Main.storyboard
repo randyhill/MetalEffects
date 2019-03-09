@@ -94,6 +94,20 @@
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="rQy-oa-5lt">
+                                <rect key="frame" x="121.5" y="546" width="132" height="40"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.5" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="132" id="7m9-es-8F8"/>
+                                    <constraint firstAttribute="height" constant="40" id="Eb3-5s-0e6"/>
+                                </constraints>
+                                <state key="normal" title="Record Video">
+                                    <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                </state>
+                                <connections>
+                                    <action selector="toggleRecording:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Q1t-X3-ifi"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
@@ -104,9 +118,11 @@
                             <constraint firstItem="AjW-8O-OSr" firstAttribute="centerY" secondItem="3hr-UM-PHs" secondAttribute="centerY" id="4ij-vQ-nqM"/>
                             <constraint firstItem="dCA-Gv-HaW" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="16" id="52d-1y-IBw"/>
                             <constraint firstItem="5bL-tB-YAm" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" id="8Nq-Sk-elY"/>
+                            <constraint firstItem="rQy-oa-5lt" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="8XF-Lb-pdy"/>
                             <constraint firstItem="5bL-tB-YAm" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="Bmx-UT-dRe"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="3hr-UM-PHs" secondAttribute="bottom" constant="32" id="GrF-72-lCK"/>
                             <constraint firstItem="ZLe-19-T47" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="Ksn-jk-97G"/>
+                            <constraint firstItem="AjW-8O-OSr" firstAttribute="top" secondItem="rQy-oa-5lt" secondAttribute="bottom" constant="20" id="OVF-oO-bLz"/>
                             <constraint firstItem="IPi-WR-Nbg" firstAttribute="centerY" secondItem="3hr-UM-PHs" secondAttribute="centerY" id="PjF-UZ-mce"/>
                             <constraint firstItem="5bL-tB-YAm" firstAttribute="bottom" secondItem="6Tk-OE-BBY" secondAttribute="bottom" id="XLF-va-Gae"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="dCA-Gv-HaW" secondAttribute="trailing" constant="16" id="Zkc-eU-EI0"/>
@@ -120,6 +136,7 @@
                     </view>
                     <connections>
                         <outlet property="FPSLabel" destination="dCA-Gv-HaW" id="HSx-PX-pUI"/>
+                        <outlet property="recordButton" destination="rQy-oa-5lt" id="mdd-xF-Wgw"/>
                         <outlet property="renderView" destination="5bL-tB-YAm" id="MR9-Yw-Ekk"/>
                     </connections>
                 </viewController>

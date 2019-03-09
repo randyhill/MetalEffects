@@ -72,6 +72,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
     var totalFrameTimeDuringCapture:Double = 0.0
     var framesSinceLastCheck = 0
     var lastCheckTime = CFAbsoluteTimeGetCurrent()
+    var isRecording = false
     
     public init(sessionPreset:AVCaptureSession.Preset,
                 cameraDevice:AVCaptureDevice? = nil,
@@ -188,7 +189,6 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
             if self.logFPS {
                 if ((CFAbsoluteTimeGetCurrent() - self.lastCheckTime) > 1.0) {
                     self.lastCheckTime = CFAbsoluteTimeGetCurrent()
-                    print("FPS: \(self.framesSinceLastCheck)")
                     self.framesSinceLastCheck = 0
                 }
 
