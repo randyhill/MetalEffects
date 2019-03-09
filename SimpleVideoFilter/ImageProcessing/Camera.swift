@@ -72,6 +72,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
     var totalFrameTimeDuringCapture:Double = 0.0
     var framesSinceLastCheck = 0
     var lastCheckTime = CFAbsoluteTimeGetCurrent()
+    
     private var _isRecording = false
     var isRecording : Bool {
         get { return _isRecording }
@@ -84,7 +85,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
             }
         }
     }
-    private var recordedFrames = [Texture]()
+    private var recordedFrames = VideoCapture()
     
     public init(sessionPreset:AVCaptureSession.Preset,
                 cameraDevice:AVCaptureDevice? = nil,
@@ -187,7 +188,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                 let inputTexture = Texture(orientation: self.location.imageOrientation(), texture: cameraTexture)
                 let outputTexture = self.updateTargetsWithTexture(inputTexture)
                 if self.isRecording {
-                    self.recordedFrames.append(outputTexture)
+                    self.recordedFrames.addFrame(outputTexture)
                 }
             }
             
