@@ -17,7 +17,6 @@
 		25E353F222331CC7005369CB /* Timestamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353E322331CA2005369CB /* Timestamp.swift */; };
 		25E353F322331CC7005369CB /* ImageOrientation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353E922331CA2005369CB /* ImageOrientation.swift */; };
 		25E353F422331CC7005369CB /* Texture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353EA22331CA2005369CB /* Texture.swift */; };
-		25E353F522331CC7005369CB /* OperationGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353E522331CA2005369CB /* OperationGroup.swift */; };
 		25E353F622331CC7005369CB /* RenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353E722331CA2005369CB /* RenderView.swift */; };
 		25E353F722331CC7005369CB /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353E822331CA2005369CB /* Position.swift */; };
 		25E353F822331CC7005369CB /* Matrix.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353E422331CA2005369CB /* Matrix.swift */; };
@@ -33,6 +32,7 @@
 		25E3540222331DA7005369CB /* Passthrough.metal in Sources */ = {isa = PBXBuildFile; fileRef = 25E353DC22331CA2005369CB /* Passthrough.metal */; };
 		25E3540322331DA7005369CB /* SaturationAdjustment.metal in Sources */ = {isa = PBXBuildFile; fileRef = 25E353DA22331CA2005369CB /* SaturationAdjustment.metal */; };
 		25E3540722332F09005369CB /* Assets-iOS.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 25E3540622332F09005369CB /* Assets-iOS.xcassets */; };
+		25E3544B223465D8005369CB /* VideoFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E3544A223465D8005369CB /* VideoFile.swift */; };
 		BCE0BEB720D6E8C20006E120 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE0BEB620D6E8C20006E120 /* AppDelegate.swift */; };
 		BCE0BEB920D6E8C20006E120 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE0BEB820D6E8C20006E120 /* ViewController.swift */; };
 		BCE0BEBC20D6E8C20006E120 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BCE0BEBA20D6E8C20006E120 /* Main.storyboard */; };
@@ -74,7 +74,6 @@
 		25E353E122331CA2005369CB /* Size.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Size.swift; sourceTree = "<group>"; };
 		25E353E322331CA2005369CB /* Timestamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timestamp.swift; sourceTree = "<group>"; };
 		25E353E422331CA2005369CB /* Matrix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matrix.swift; sourceTree = "<group>"; };
-		25E353E522331CA2005369CB /* OperationGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationGroup.swift; sourceTree = "<group>"; };
 		25E353E622331CA2005369CB /* MetalRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRendering.swift; sourceTree = "<group>"; };
 		25E353E722331CA2005369CB /* RenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderView.swift; sourceTree = "<group>"; };
 		25E353E822331CA2005369CB /* Position.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Position.swift; sourceTree = "<group>"; };
@@ -82,6 +81,7 @@
 		25E353EA22331CA2005369CB /* Texture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Texture.swift; sourceTree = "<group>"; };
 		25E353EB22331CA2005369CB /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		25E3540622332F09005369CB /* Assets-iOS.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets-iOS.xcassets"; sourceTree = "<group>"; };
+		25E3544A223465D8005369CB /* VideoFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoFile.swift; sourceTree = "<group>"; };
 		BCE0BEB320D6E8C20006E120 /* SimpleVideoFilter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleVideoFilter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCE0BEB620D6E8C20006E120 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BCE0BEB820D6E8C20006E120 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -111,7 +111,6 @@
 				25E353E422331CA2005369CB /* Matrix.swift */,
 				25E353E622331CA2005369CB /* MetalRendering.swift */,
 				25E353C822331CA2005369CB /* MetalRenderingDevice.swift */,
-				25E353E522331CA2005369CB /* OperationGroup.swift */,
 				25E353CB22331CA2005369CB /* Operations */,
 				25E353CA22331CA2005369CB /* Pipeline.swift */,
 				25E353E822331CA2005369CB /* Position.swift */,
@@ -121,6 +120,7 @@
 				25E353EA22331CA2005369CB /* Texture.swift */,
 				25E353C722331CA2005369CB /* TextureSamplingOperation.swift */,
 				25E353E322331CA2005369CB /* Timestamp.swift */,
+				25E3544A223465D8005369CB /* VideoFile.swift */,
 			);
 			path = ImageProcessing;
 			sourceTree = "<group>";
@@ -248,10 +248,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				25E353FB22331D8D005369CB /* SaturationAdjustment.swift in Sources */,
+				25E3544B223465D8005369CB /* VideoFile.swift in Sources */,
 				25E353ED22331CA9005369CB /* MetalRenderingDevice.swift in Sources */,
 				25E3540222331DA7005369CB /* Passthrough.metal in Sources */,
 				25E353FF22331D9F005369CB /* ContrastAdjustment.metal in Sources */,
-				25E353F522331CC7005369CB /* OperationGroup.swift in Sources */,
 				25E353EE22331CA9005369CB /* Pipeline.swift in Sources */,
 				BCE0BEB920D6E8C20006E120 /* ViewController.swift in Sources */,
 				25E353F822331CC7005369CB /* Matrix.swift in Sources */,

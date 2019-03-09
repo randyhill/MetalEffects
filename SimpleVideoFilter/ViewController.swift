@@ -23,9 +23,9 @@ class ViewController: UIViewController, CameraDelegate {
             camera.runBenchmark = true
             // camera --> brightness --> saturation --> contrast --> renderView
             camera.addTarget(brightness)
-            brightness.addTarget(saturation)
-            saturation.addTarget(contrast)
-            contrast.addTarget(renderView)
+            camera.addTarget(saturation)
+            camera.addTarget(contrast)
+            camera.addTarget(renderView)
             camera.startCapture()
         } catch {
             fatalError("Could not initialize rendering pipeline: \(error)")

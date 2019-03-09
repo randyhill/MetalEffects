@@ -2,7 +2,6 @@ import Foundation
 import MetalKit
 
 public class RenderView: MTKView, ImageConsumer {
-    
     public let sources = SourceContainer()
     public let maximumInputs: UInt = 1
     var currentTexture: Texture?
@@ -33,10 +32,11 @@ public class RenderView: MTKView, ImageConsumer {
         isPaused = true
     }
     
-    public func newTextureAvailable(_ texture:Texture, fromSourceIndex:UInt) {
+    public func newTextureAvailable(_ texture:Texture, fromSourceIndex:UInt) -> Texture? {
         self.drawableSize = CGSize(width: texture.texture.width, height: texture.texture.height)
         currentTexture = texture
         self.draw()
+        return texture
     }
     
     public override func draw(_ rect:CGRect) {

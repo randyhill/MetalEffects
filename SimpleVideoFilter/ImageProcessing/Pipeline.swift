@@ -11,7 +11,7 @@ public protocol ImageConsumer:AnyObject {
     var maximumInputs:UInt { get }
     var sources:SourceContainer { get }
     
-    func newTextureAvailable(_ texture:Texture, fromSourceIndex:UInt)
+    func newTextureAvailable(_ texture:Texture, fromSourceIndex:UInt) -> Texture?
 }
 
 public protocol ImageProcessingOperation: ImageConsumer, ImageSource {
@@ -41,10 +41,15 @@ public extension ImageSource {
         targets.removeAll()
     }
     
-    public func updateTargetsWithTexture(_ texture:Texture) {
+    public func updateTargetsWithTexture(_ texture:Texture) -> Texture {
+        var inputTexture = texture
         for (target, index) in targets {
-            target.newTextureAvailable(texture, fromSourceIndex:index)
+            guard let outputTexture = target.newTextureAvailable(inputTexture, fromSourceIndex:index) else {
+                break
+            }
+            inputTexture = outputTexture
         }
+        return inputTexture
     }
 }
 
@@ -142,36 +147,5 @@ public class SourceContainer {
     
     public func removeAtIndex(_ index:UInt) {
         sources[index] = nil
-    }
-}
-
-public class ImageRelay: ImageProcessingOperation {
-    public var newImageCallback:((Texture) -> ())?
-    
-    public let sources = SourceContainer()
-    public let targets = TargetContainer()
-    public let maximumInputs:UInt = 1
-    public var preventRelay:Bool = false
-    
-    public init() {
-    }
-    
-    public func transmitPreviousImage(to target:ImageConsumer, atIndex:UInt) {
-        sources.sources[0]?.transmitPreviousImage(to:self, atIndex:0)
-    }
-
-    public func newTextureAvailable(_ texture: Texture, fromSourceIndex: UInt) {
-        if let newImageCallback = newImageCallback {
-            newImageCallback(texture)
-        }
-        if (!preventRelay) {
-            relayTextureOnward(texture)
-        }
-    }
-    
-    public func relayTextureOnward(_ texture:Texture) {
-        for (target, index) in targets {
-            target.newTextureAvailable(texture, fromSourceIndex:index)
-        }
     }
 }

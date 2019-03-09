@@ -53,7 +53,7 @@ open class BasicOperation: ImageProcessingOperation {
         // TODO: Finish implementation later
     }
     
-    public func newTextureAvailable(_ texture: Texture, fromSourceIndex: UInt) {
+    public func newTextureAvailable(_ texture: Texture, fromSourceIndex: UInt) -> Texture? {
         let _ = textureInputSemaphore.wait(timeout:DispatchTime.distantFuture)
         defer {
             textureInputSemaphore.signal()
@@ -63,51 +63,54 @@ open class BasicOperation: ImageProcessingOperation {
 
         guard (!activatePassthroughOnNextFrame) else { // Use this to allow a bootstrap of cyclical processing, like with a low pass filter
             activatePassthroughOnNextFrame = false
-            //            updateTargetsWithTexture(outputTexture) // TODO: Fix this
-            return
+            return nil
         }
         
-        if (UInt(inputTextures.count) >= maximumInputs) {
-            let outputWidth:Int
-            let outputHeight:Int
-            
-            let firstInputTexture = inputTextures[0]!
-            if firstInputTexture.orientation.rotationNeeded(for:.portrait).flipsDimensions() {
-                outputWidth = firstInputTexture.texture.height
-                outputHeight = firstInputTexture.texture.width
-            } else {
-                outputWidth = firstInputTexture.texture.width
-                outputHeight = firstInputTexture.texture.height
-            }
-
-            if uniformSettings.usesAspectRatio {
-                let outputRotation = firstInputTexture.orientation.rotationNeeded(for:.portrait)
-                uniformSettings["aspectRatio"] = firstInputTexture.aspectRatio(for: outputRotation)
-            }
-            
-            guard let commandBuffer = sharedMetalRenderingDevice.commandQueue.makeCommandBuffer() else {return}
-
-            let outputTexture = Texture(device:sharedMetalRenderingDevice.device, orientation: .portrait, width: outputWidth, height: outputHeight)
-            
-            if let alternateRenderingFunction = metalPerformanceShaderPathway, useMetalPerformanceShaders {
-                var rotatedInputTextures: [UInt:Texture]
-                if (firstInputTexture.orientation.rotationNeeded(for:.portrait) != .noRotation) {
-                    let rotationOutputTexture = Texture(device:sharedMetalRenderingDevice.device, orientation: .portrait, width: outputWidth, height: outputHeight)
-                    guard let rotationCommandBuffer = sharedMetalRenderingDevice.commandQueue.makeCommandBuffer() else {return}
-                    rotationCommandBuffer.renderQuad(pipelineState: sharedMetalRenderingDevice.passthroughRenderState, uniformSettings: uniformSettings, inputTextures: inputTextures, useNormalizedTextureCoordinates: useNormalizedTextureCoordinates, outputTexture: rotationOutputTexture)
-                    rotationCommandBuffer.commit()
-                    rotatedInputTextures = inputTextures
-                    rotatedInputTextures[0] = rotationOutputTexture
-                } else {
-                    rotatedInputTextures = inputTextures
-                }
-                alternateRenderingFunction(commandBuffer, rotatedInputTextures, outputTexture)
-            } else {
-                commandBuffer.renderQuad(pipelineState: renderPipelineState, uniformSettings: uniformSettings, inputTextures: inputTextures, useNormalizedTextureCoordinates: useNormalizedTextureCoordinates, outputTexture: outputTexture)
-            }
-            commandBuffer.commit()
-            
-            updateTargetsWithTexture(outputTexture)
+        guard (UInt(inputTextures.count) >= maximumInputs) else {
+            return nil
         }
+        let outputWidth:Int
+        let outputHeight:Int
+        
+        let firstInputTexture = inputTextures[0]!
+        if firstInputTexture.orientation.rotationNeeded(for:.portrait).flipsDimensions() {
+            outputWidth = firstInputTexture.texture.height
+            outputHeight = firstInputTexture.texture.width
+        } else {
+            outputWidth = firstInputTexture.texture.width
+            outputHeight = firstInputTexture.texture.height
+        }
+
+        if uniformSettings.usesAspectRatio {
+            let outputRotation = firstInputTexture.orientation.rotationNeeded(for:.portrait)
+            uniformSettings["aspectRatio"] = firstInputTexture.aspectRatio(for: outputRotation)
+        }
+        
+        guard let commandBuffer = sharedMetalRenderingDevice.commandQueue.makeCommandBuffer() else {
+            return nil
+        }
+
+        let outputTexture = Texture(device:sharedMetalRenderingDevice.device, orientation: .portrait, width: outputWidth, height: outputHeight)
+        
+        if let alternateRenderingFunction = metalPerformanceShaderPathway, useMetalPerformanceShaders {
+            var rotatedInputTextures: [UInt:Texture]
+            if (firstInputTexture.orientation.rotationNeeded(for:.portrait) != .noRotation) {
+                let rotationOutputTexture = Texture(device:sharedMetalRenderingDevice.device, orientation: .portrait, width: outputWidth, height: outputHeight)
+                guard let rotationCommandBuffer = sharedMetalRenderingDevice.commandQueue.makeCommandBuffer() else {
+                    return nil
+                }
+                rotationCommandBuffer.renderQuad(pipelineState: sharedMetalRenderingDevice.passthroughRenderState, uniformSettings: uniformSettings, inputTextures: inputTextures, useNormalizedTextureCoordinates: useNormalizedTextureCoordinates, outputTexture: rotationOutputTexture)
+                rotationCommandBuffer.commit()
+                rotatedInputTextures = inputTextures
+                rotatedInputTextures[0] = rotationOutputTexture
+            } else {
+                rotatedInputTextures = inputTextures
+            }
+            alternateRenderingFunction(commandBuffer, rotatedInputTextures, outputTexture)
+        } else {
+            commandBuffer.renderQuad(pipelineState: renderPipelineState, uniformSettings: uniformSettings, inputTextures: inputTextures, useNormalizedTextureCoordinates: useNormalizedTextureCoordinates, outputTexture: outputTexture)
+        }
+        commandBuffer.commit()
+        return outputTexture
     }
 }
