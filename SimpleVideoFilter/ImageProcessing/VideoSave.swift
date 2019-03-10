@@ -10,9 +10,6 @@ import Foundation
 import AVFoundation
 import UIKit
 
-typealias CXEMovieMakerCompletion = (URL) -> Void
-typealias CXEMovieMakerUIImageExtractor = (AnyObject) -> UIImage?
-
 public class ImagesToVideoUtils: NSObject {
     static let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
     static let tempPath = paths[0] + "/exportVideo.mp4"
@@ -23,10 +20,6 @@ public class ImagesToVideoUtils: NSObject {
     var bufferAdapter: AVAssetWriterInputPixelBufferAdaptor
     var videoSettings: [String : Any]
     var frameTime: CMTime
-    
-    var completionBlock: CXEMovieMakerCompletion?
-    var movieMakerUIImageExtractor:CXEMovieMakerUIImageExtractor?
-    
     
     public class func videoSettings(width: Int, height: Int) -> [String: Any] {
         if Int(width) % 16 != 0 {
@@ -40,20 +33,20 @@ public class ImagesToVideoUtils: NSObject {
         return videoSettings
     }
     
-    public init(videoSettings: [String: Any], milliseconds: Int64) {
+    public init?(videoSettings: [String: Any], milliseconds: Int64) {
         self.videoSettings = videoSettings
-        self.writeInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
+        writeInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
         let bufferAttributes:[String: Any] = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32ARGB)]
-        self.bufferAdapter = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: self.writeInput, sourcePixelBufferAttributes: bufferAttributes)
-        self.frameTime = CMTimeMake(milliseconds, 1000)
+        bufferAdapter = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: self.writeInput, sourcePixelBufferAttributes: bufferAttributes)
+        frameTime = CMTimeMake(milliseconds, 1000)
         do {
             try FileManager.default.removeItem(at: ImagesToVideoUtils.fileURL) // assetwriter doesn't remove files.
-        } catch {
-            print("Could not remove existing file")
+            assetWriter = try AVAssetWriter(url: ImagesToVideoUtils.fileURL, fileType: AVFileType.mov)
+         } catch {
+            print("Could not create asset writer: \(error)")
+            return nil
         }
-        self.assetWriter = try! AVAssetWriter(url: ImagesToVideoUtils.fileURL, fileType: AVFileType.mov)
-//        assert(self.assetWriter.canAdd(self.writeInput), "add failed")
-        self.assetWriter.add(self.writeInput)
+        assetWriter.add(self.writeInput)
 
         super.init()
         
@@ -65,28 +58,19 @@ public class ImagesToVideoUtils: NSObject {
         }
     }
     
-    func createMovieFromVideoFrames(_ _videoFrames: [VideoFrame], withCompletion: @escaping CXEMovieMakerCompletion){
-        self.createMovieFromSource(_videoFrames, extractor: {(inputObject:AnyObject) -> UIImage? in
-            return inputObject as? UIImage}, withCompletion: withCompletion)
-    }
-    
-    func createMovieFromSource(_ videoFrames: [VideoFrame], extractor: @escaping CXEMovieMakerUIImageExtractor, withCompletion: @escaping CXEMovieMakerCompletion){
-        self.completionBlock = withCompletion
-        
+    func createMovieFromVideoFrames(_ videoFrames: [VideoFrame], completion: @escaping (URL) -> Void){
         self.assetWriter.startWriting()
         self.assetWriter.startSession(atSourceTime: kCMTimeZero)
         let mediaInputQueue = DispatchQueue(label: "mediaInputQueue")
         var currentMilliseconds: Int64?
         var mutableFrames = videoFrames
         self.writeInput.requestMediaDataWhenReady(on: mediaInputQueue){
-             print("save \(videoFrames.count) frames")
             while mutableFrames.count > 0 {
                 if self.writeInput.isReadyForMoreMediaData {
                     let frame = mutableFrames.removeFirst()
                     var sampleBuffer: CVPixelBuffer?
                     autoreleasepool{
-//                        let fixedOrientation = frame.image.fixOrientation()
-                        if let img = extractor(frame.image), let cgImage = img.cgImage {
+                        if let cgImage = frame.image.cgImageInCorrectOrientation {
                             sampleBuffer = self.newPixelBufferFrom(cgImage: cgImage, videoSettings: self.videoSettings)
                         } else {
                             print("Warning: counld not extract one of the frames")
@@ -110,13 +94,13 @@ public class ImagesToVideoUtils: NSObject {
             print("Was ready for media: \(self.writeInput.isReadyForMoreMediaData), frames left: \(mutableFrames.count)")
             self.writeInput.markAsFinished()
             self.assetWriter.finishWriting {
-                self.completionBlock!(ImagesToVideoUtils.fileURL)
+                completion(ImagesToVideoUtils.fileURL)
             }
         }
     }
     
     func newPixelBufferFrom(cgImage:CGImage, videoSettings: [String : Any]) -> CVPixelBuffer? {
-        var pxbuffer:CVPixelBuffer?
+        var bufferOptional: CVPixelBuffer?
         guard let frameWidth = videoSettings[AVVideoWidthKey] as? Int else {
             print("newPixelBufferFrom: could not find frameWidth")
             return nil
@@ -126,7 +110,8 @@ public class ImagesToVideoUtils: NSObject {
             return nil
         }
         let options:[String: Any] = [kCVPixelBufferCGImageCompatibilityKey as String: true, kCVPixelBufferCGBitmapContextCompatibilityKey as String: true]
-        guard CVPixelBufferCreate(kCFAllocatorDefault, frameWidth, frameHeight, kCVPixelFormatType_32ARGB, options as CFDictionary?, &pxbuffer) == kCVReturnSuccess, let buffer = pxbuffer else {
+        guard CVPixelBufferCreate(kCFAllocatorDefault, frameWidth, frameHeight, kCVPixelFormatType_32ARGB, options as CFDictionary?, &bufferOptional) == kCVReturnSuccess,
+            let buffer = bufferOptional else {
             print("newPixelBufferFrom: newPixelBuffer failed")
             return nil
         }
@@ -141,37 +126,32 @@ public class ImagesToVideoUtils: NSObject {
         
         context.concatenate(CGAffineTransform.identity)
         context.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
-        CVPixelBufferUnlockBaseAddress(pxbuffer!, CVPixelBufferLockFlags(rawValue: 0))
+        CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
         return buffer
     }
 }
 
-//
-//extension UIImage {
-//    func fixOrientation() -> UIImage {
-//        let rect = CGRect(origin: CGPoint(x: 0, y: 0), size: self.size)
-//        func rad(_ degree: Double) -> CGFloat {
-//            return CGFloat(degree / 180.0 * .pi)
-//        }
-//
-//        var rectTransform: CGAffineTransform
-//         switch imageOrientation {
-//        case .left:
-//            rectTransform = CGAffineTransform(rotationAngle: rad(90)).translatedBy(x: 0, y: -self.size.height)
-//        case .right:
-//            rectTransform = CGAffineTransform(rotationAngle: rad(-90)).translatedBy(x: -self.size.width, y: 0)
-//         case .down:
-//            rectTransform = CGAffineTransform(rotationAngle: rad(-180)).translatedBy(x: -self.size.width, y: -self.size.height)
-//         case .up:
-//            rectTransform = CGAffineTransform(rotationAngle: rad(180)).translatedBy(x: -self.size.width, y: -self.size.height)
-//        default:
-//            rectTransform = .identity
-//        }
-//        rectTransform = rectTransform.scaledBy(x: self.scale, y: self.scale)
-//
-//        let imageRef = self.cgImage!.cropping(to: rect.applying(rectTransform))
-//        let result = UIImage(cgImage: imageRef!, scale: self.scale, orientation: self.imageOrientation)
-//        return result
-//    }
-//}
+extension UIImage {
+    var cgImageInCorrectOrientation: CGImage? {
+         UIGraphicsBeginImageContext(size)
+        guard let context = UIGraphicsGetCurrentContext(), let cgImage = cgImage else {
+            print("failed to get context to flip orirentation")
+            return self.cgImage
+        }
+        
+        // Move the origin to the middle of the image so we will rotate and scale around the center.
+        context.translateBy(x: size.width/2, y: size.height/2)
+        
+        // Rotate the image context, then flip hroizontally, then draw
+        context.rotate(by: CGFloat.pi)
+        context.scaleBy(x: -1.0, y: -1.0)
+        context.draw(cgImage, in: CGRect(x: -size.width/2, y: -size.height/2, width: size.width, height: size.height))
+        
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return newImage?.cgImage
+    }
+}
+
 

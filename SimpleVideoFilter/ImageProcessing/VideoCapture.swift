@@ -72,7 +72,9 @@ class VideoCapture {
         let width = Int(size.width)
         let height = Int(size.height)
         let videoSettings = ImagesToVideoUtils.videoSettings(width: width, height: height)
-        let fileSaver = ImagesToVideoUtils(videoSettings: videoSettings, milliseconds: milliseconds)
+        guard let fileSaver = ImagesToVideoUtils(videoSettings: videoSettings, milliseconds: milliseconds) else {
+            return print("VideoCapture:saveToDisk, could not create file saver")
+        }
         fileSaver.createMovieFromVideoFrames(videoFrames) { (fileURL) in
             self.fileURL = fileURL
             if let attr = try? FileManager.default.attributesOfItem(atPath: fileURL.path) {

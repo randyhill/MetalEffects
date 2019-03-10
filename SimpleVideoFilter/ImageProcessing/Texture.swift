@@ -3,10 +3,6 @@ import Metal
 
 public class Texture {
     public var orientation: ImageOrientation
-//    public var pixelFormat: MTLPixelFormat
-//    public var width: Int
-//    public var height: Int
-//    public var mipMapLevel = 0
     public let texture: MTLTexture
     
     public init(orientation: ImageOrientation, texture: MTLTexture) {
@@ -15,9 +11,6 @@ public class Texture {
     }
     
     public init(device:MTLDevice, orientation: ImageOrientation, pixelFormat: MTLPixelFormat = .bgra8Unorm, width: Int, height: Int) {
-//        self.pixelFormat = pixelFormat
-//        self.width = width
-//        self.height = height
         let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
                                                                          width: width,
                                                                          height: height,
