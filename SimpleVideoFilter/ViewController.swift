@@ -35,8 +35,13 @@ class ViewController: UIViewController, CameraDelegate {
     func didCaptureBuffer(_ sampleBuffer: CMSampleBuffer) {
     }
     
+    let startTime = Date()
     func frameTime(average: Double, current: Double) {
         let fps = Int(1000.0/current)
+        let timeInterval = Date().timeIntervalSince(startTime)
+        let string = String(format: "Time: %.02, Ave: %.02f, Current: %.02f", Double(timeInterval), average, current)
+        print(string)
+        //print("Time: \(timeInterval) average: \(average) current: \(current)")
         DispatchQueue.main.async {
             self.FPSLabel.text = "FPS: \(fps)"
         }

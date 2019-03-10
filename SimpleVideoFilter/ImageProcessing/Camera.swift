@@ -82,6 +82,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                 recordedFrames.removeAll()
             } else {
                 // Save to camera roll
+                recordedFrames.saveToDiskWithAverageFrameTime(averageFrameMilliseconds())
             }
         }
     }
@@ -155,6 +156,11 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
         }
     }
     
+    private func averageFrameMilliseconds() -> Int64 {
+        let average = totalFrameTimeDuringCapture / Double(self.numberOfFramesCaptured - initialBenchmarkFramesToIgnore)
+        return Int64(average * 1000)
+    }
+    
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         
         guard (frameRenderingSemaphore.wait(timeout:DispatchTime.now()) == DispatchTimeoutResult.success) else { return }
@@ -188,7 +194,9 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                 let inputTexture = Texture(orientation: self.location.imageOrientation(), texture: cameraTexture)
                 let outputTexture = self.updateTargetsWithTexture(inputTexture)
                 if self.isRecording {
-                    self.recordedFrames.addFrame(outputTexture)
+                    let currentFrameTime = (CFAbsoluteTimeGetCurrent() - startTime)
+                    let frameMilliseconds = 1000*currentFrameTime
+                    self.recordedFrames.addFrame(outputTexture, milliseconds: Int64(frameMilliseconds))
                 }
             }
             

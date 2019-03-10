@@ -32,6 +32,7 @@
 		25E3540322331DA7005369CB /* SaturationAdjustment.metal in Sources */ = {isa = PBXBuildFile; fileRef = 25E353DA22331CA2005369CB /* SaturationAdjustment.metal */; };
 		25E3540722332F09005369CB /* Assets-iOS.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 25E3540622332F09005369CB /* Assets-iOS.xcassets */; };
 		25E3544B223465D8005369CB /* VideoCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E3544A223465D8005369CB /* VideoCapture.swift */; };
+		25E3544D22347552005369CB /* VideoSave.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E3544C22347552005369CB /* VideoSave.swift */; };
 		BCE0BEB720D6E8C20006E120 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE0BEB620D6E8C20006E120 /* AppDelegate.swift */; };
 		BCE0BEB920D6E8C20006E120 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE0BEB820D6E8C20006E120 /* ViewController.swift */; };
 		BCE0BEBC20D6E8C20006E120 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BCE0BEBA20D6E8C20006E120 /* Main.storyboard */; };
@@ -80,6 +81,7 @@
 		25E353EB22331CA2005369CB /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		25E3540622332F09005369CB /* Assets-iOS.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets-iOS.xcassets"; sourceTree = "<group>"; };
 		25E3544A223465D8005369CB /* VideoCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCapture.swift; sourceTree = "<group>"; };
+		25E3544C22347552005369CB /* VideoSave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSave.swift; sourceTree = "<group>"; };
 		BCE0BEB320D6E8C20006E120 /* SimpleVideoFilter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleVideoFilter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCE0BEB620D6E8C20006E120 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BCE0BEB820D6E8C20006E120 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 				25E353EA22331CA2005369CB /* Texture.swift */,
 				25E353E322331CA2005369CB /* Timestamp.swift */,
 				25E3544A223465D8005369CB /* VideoCapture.swift */,
+				25E3544C22347552005369CB /* VideoSave.swift */,
 			);
 			path = ImageProcessing;
 			sourceTree = "<group>";
@@ -259,6 +262,7 @@
 				25E353F922331CC7005369CB /* MetalRendering.swift in Sources */,
 				25E353F022331CC0005369CB /* Size.swift in Sources */,
 				BCE0BEB720D6E8C20006E120 /* AppDelegate.swift in Sources */,
+				25E3544D22347552005369CB /* VideoSave.swift in Sources */,
 				25E353F622331CC7005369CB /* RenderView.swift in Sources */,
 				25E353FC22331D9F005369CB /* BlendShaderTypes.metal in Sources */,
 				25E3540022331D9F005369CB /* ContrastAdjustment.swift in Sources */,
