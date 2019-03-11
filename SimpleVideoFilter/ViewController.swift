@@ -22,7 +22,10 @@ class ViewController: UIViewController, CameraDelegate {
             messageView.layer.cornerRadius = 8
             messageView.layer.masksToBounds = true
 
-            camera = try Camera(sessionPreset: .hd1920x1080)
+            guard let camera = Camera(sessionPreset: .high) else {
+                throw CameraError()
+            }
+            self.camera = camera
             camera.delegate = self
              // camera --> brightness --> saturation --> contrast --> renderView
             camera.addTarget(brightness)
