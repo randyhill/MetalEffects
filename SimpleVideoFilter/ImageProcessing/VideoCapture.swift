@@ -11,100 +11,82 @@ import AVFoundation
 import Photos
 
 struct VideoFrame {
-    let image: UIImage
+    let ciImage: CIImage
     let milliseconds: Int64
 }
 
 class VideoCapture {
+    static let VideoSaved = Notification.Name(rawValue: "VideoCapture.VideoSaved")
     var videoFrames = [VideoFrame]()
     var fileURL : URL?
     var lastTime: Date?
-    
+    var frameSize = CGSize(width: 0, height: 0)
+ 
     func removeAll() {
-        
+        videoFrames.removeAll()
     }
     
     func addFrame(_ newFrame: Texture, milliseconds: Int64) {
-        guard let image = image(from: newFrame.texture) else {
-            return print("VideoCapture:addFrame Couldn't generate frame")
-        }
+        DbOnMainThread(false)
         var msecs:Int64 = 0
         if let lastTime = lastTime {
             let timeInterval = Date().timeIntervalSince(lastTime)
             msecs = Int64(timeInterval*1000.0)
         }
-        let videoFrame = VideoFrame(image: image, milliseconds: msecs)
+        let kciOptions = [kCIImageColorSpace: CGColorSpaceCreateDeviceRGB(),
+                          kCIContextOutputPremultiplied: true,
+                          kCIContextUseSoftwareRenderer: false] as [String : Any]
+        guard let ciImage = CIImage(mtlTexture: newFrame.texture, options: kciOptions) else {
+            return DbLog("VideoCapture:addFrame Couldn't generate ci image")
+        }
+        frameSize = CGSize(width: newFrame.texture.width, height: newFrame.texture.height)
+        let videoFrame = VideoFrame(ciImage: ciImage, milliseconds: msecs)
         videoFrames.append(videoFrame)
-        print("Saved \(videoFrames.count) frames, \(videoFrame.milliseconds) milliseconds")
         lastTime = Date()
     }
     
-    private func image(from texture: MTLTexture) -> UIImage? {
-        let bytesPerPixel = 4
-        
-        let imageByteCount = texture.width * texture.height * bytesPerPixel
-        let bytesPerRow = texture.width * bytesPerPixel
-        var src = [UInt8](repeating: 0, count: Int(imageByteCount))
-        let region = MTLRegionMake2D(0, 0, texture.width, texture.height)
-        texture.getBytes(&src, bytesPerRow: bytesPerRow, from: region, mipmapLevel: 0)
-        
-        // Create an image context
-        let bitmapInfo = CGBitmapInfo(rawValue: (CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue))
-        let bitsPerComponent = 8
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let context = CGContext(data: &src, width: texture.width, height: texture.height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo.rawValue)
-        
-        // Creates the image from the graphics context
-        guard let dstImage = context?.makeImage() else {
-            print("VideoCapture:image Couldn't make image from context")
-            return nil
-        }
-        
-        // Creates the final UIImage
-        return UIImage(cgImage: dstImage, scale: 0.0, orientation: .up)
-    }
-    
-    func saveToDiskWithAverageFrameTime(_ milliseconds: Int64) {
+    // Also clears saved frames
+    var startSaveTime = Date()
+    func saveToDisk() {
+        DbOnMainThread(false)
         guard videoFrames.count > 0 else {
-            return print("VideoCapture:saveToDisk, Nothing to save")
+            return DbLog("VideoCapture:saveToDisk, Nothing to save")
         }
-        let size = videoFrames[0].image.size
-        let width = Int(size.width)
-        let height = Int(size.height)
+        startSaveTime = Date()
+        let width = Int(frameSize.width)
+        let height = Int(frameSize.height)
         let videoSettings = ImagesToVideoUtils.videoSettings(width: width, height: height)
-        guard let fileSaver = ImagesToVideoUtils(videoSettings: videoSettings, milliseconds: milliseconds) else {
-            return print("VideoCapture:saveToDisk, could not create file saver")
+        guard let fileSaver = ImagesToVideoUtils(videoSettings: videoSettings, timeScale: 1000) else {
+            return DbLog("VideoCapture:saveToDisk, could not create file saver")
         }
         fileSaver.createMovieFromVideoFrames(videoFrames) { (fileURL) in
             self.fileURL = fileURL
-            if let attr = try? FileManager.default.attributesOfItem(atPath: fileURL.path) {
-                if let fileSize = attr[FileAttributeKey.size] as? UInt64 {
-                    print("File size: \(fileSize)")
-                }
-            }
             self.videoFrames.removeAll()
             PHPhotoLibrary.requestAuthorization { (status) in
                 switch status {
                 case .authorized:
                     self.saveToCameraRoll(fileURL)
                 default:
-                    print("Could not save video, no permissions given")
+                    DbLog("Could not save video, no permissions given")
                }
             }
         }
     }
     
     func saveToCameraRoll(_ fileURL: URL) {
+        DbOnMainThread(false)
         PHPhotoLibrary.shared().performChanges({
             PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
         }) { saved, error in
             if let error = error {
-                print("Could not save video to library: \(error)")
+                DbLog("Could not save video to library: \(error)")
             }
             else if saved {
-                print("VIDEO SAVED!")
+                let saveTime = Date().timeIntervalSince(self.startSaveTime)
+                DbLog("Took \(saveTime) seconds to save")
+                NotificationCenter.default.post(Notification(name: VideoCapture.VideoSaved))
             }  else {
-                print("weird error saving video to library")
+                DbLog("weird error saving video to library")
             }
         }
     }

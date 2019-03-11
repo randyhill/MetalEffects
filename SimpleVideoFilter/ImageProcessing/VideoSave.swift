@@ -19,11 +19,11 @@ public class ImagesToVideoUtils: NSObject {
     var writeInput: AVAssetWriterInput
     var bufferAdapter: AVAssetWriterInputPixelBufferAdaptor
     var videoSettings: [String : Any]
-    var frameTime: CMTime
+    var timeScale: Int32
     
     public class func videoSettings(width: Int, height: Int) -> [String: Any] {
         if Int(width) % 16 != 0 {
-            print("warning: video settings width must be divisible by 16")
+            DbLog("warning: video settings width must be divisible by 16")
         }
         
         let videoSettings:[String: Any] = [AVVideoCodecKey: AVVideoCodecType.jpeg,
@@ -33,17 +33,17 @@ public class ImagesToVideoUtils: NSObject {
         return videoSettings
     }
     
-    public init?(videoSettings: [String: Any], milliseconds: Int64) {
+    public init?(videoSettings: [String: Any], timeScale: Int32) {
         self.videoSettings = videoSettings
+        self.timeScale = timeScale
         writeInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
         let bufferAttributes:[String: Any] = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32ARGB)]
         bufferAdapter = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: self.writeInput, sourcePixelBufferAttributes: bufferAttributes)
-        frameTime = CMTimeMake(milliseconds, 1000)
-        do {
+         do {
             try FileManager.default.removeItem(at: ImagesToVideoUtils.fileURL) // assetwriter doesn't remove files.
             assetWriter = try AVAssetWriter(url: ImagesToVideoUtils.fileURL, fileType: AVFileType.mov)
          } catch {
-            print("Could not create asset writer: \(error)")
+            DbLog("Could not create asset writer: \(error)")
             return nil
         }
         assetWriter.add(self.writeInput)
@@ -52,17 +52,18 @@ public class ImagesToVideoUtils: NSObject {
         
         if FileManager.default.fileExists(atPath: ImagesToVideoUtils.tempPath) {
             guard (try? FileManager.default.removeItem(atPath: ImagesToVideoUtils.tempPath)) != nil else {
-                print("remove path failed")
+                DbLog("remove path failed")
                 return
             }
         }
     }
     
     func createMovieFromVideoFrames(_ videoFrames: [VideoFrame], completion: @escaping (URL) -> Void){
+        DbOnMainThread(false)
         self.assetWriter.startWriting()
         self.assetWriter.startSession(atSourceTime: kCMTimeZero)
         let mediaInputQueue = DispatchQueue(label: "mediaInputQueue")
-        var currentMilliseconds: Int64?
+        var totalMilliseconds: Int64?
         var mutableFrames = videoFrames
         self.writeInput.requestMediaDataWhenReady(on: mediaInputQueue){
             while mutableFrames.count > 0 {
@@ -70,28 +71,26 @@ public class ImagesToVideoUtils: NSObject {
                     let frame = mutableFrames.removeFirst()
                     var sampleBuffer: CVPixelBuffer?
                     autoreleasepool{
-                        if let cgImage = frame.image.cgImageInCorrectOrientation {
+                        if let cgImage = self.convertCIImageToCGImage(inputImage: frame.ciImage) {
                             sampleBuffer = self.newPixelBufferFrom(cgImage: cgImage, videoSettings: self.videoSettings)
                         } else {
-                            print("Warning: counld not extract one of the frames")
+                            DbLog("Warning: counld not extract one of the frames")
                         }
                     }
                     if let sampleBuffer = sampleBuffer {
                         var curMSecs: Int64 = 0
-                        if let mSec = currentMilliseconds {
-                            print("Frame milliseconds: \(mSec)")
-                            curMSecs = mSec + frame.milliseconds
+                        if let prevMilliseconds = totalMilliseconds {
+                            curMSecs = prevMilliseconds + frame.milliseconds
                         }
-                        let presentTime = CMTimeMake(curMSecs, self.frameTime.timescale)
-                        print("Present time: \(presentTime)")
+                        let presentTime = CMTimeMake(curMSecs, self.timeScale)
                         self.bufferAdapter.append(sampleBuffer, withPresentationTime: presentTime)
-                        currentMilliseconds = curMSecs
+                        totalMilliseconds = curMSecs
                     } else {
-                        print("Got Nil buffer for frame")
+                        DbLog("Got Nil buffer for frame")
                     }
                 }
             }
-            print("Was ready for media: \(self.writeInput.isReadyForMoreMediaData), frames left: \(mutableFrames.count)")
+            DbLog("Was ready for media: \(self.writeInput.isReadyForMoreMediaData), frames left: \(mutableFrames.count)")
             self.writeInput.markAsFinished()
             self.assetWriter.finishWriting {
                 completion(ImagesToVideoUtils.fileURL)
@@ -99,59 +98,44 @@ public class ImagesToVideoUtils: NSObject {
         }
     }
     
-    func newPixelBufferFrom(cgImage:CGImage, videoSettings: [String : Any]) -> CVPixelBuffer? {
+    private func convertCIImageToCGImage(inputImage: CIImage) -> CGImage? {
+        let context = CIContext(options: nil)
+        if let cgImage = context.createCGImage(inputImage, from: inputImage.extent) {
+            return cgImage
+        }
+        return nil
+    }
+    
+    private func newPixelBufferFrom(cgImage: CGImage, videoSettings: [String : Any]) -> CVPixelBuffer? {
         var bufferOptional: CVPixelBuffer?
         guard let frameWidth = videoSettings[AVVideoWidthKey] as? Int else {
-            print("newPixelBufferFrom: could not find frameWidth")
+            DbLog("newPixelBufferFrom: could not find frameWidth")
             return nil
         }
         guard let frameHeight = videoSettings[AVVideoHeightKey] as? Int else {
-            print("newPixelBufferFrom: could not find frameHeight")
+            DbLog("newPixelBufferFrom: could not find frameHeight")
             return nil
         }
-        let options:[String: Any] = [kCVPixelBufferCGImageCompatibilityKey as String: true, kCVPixelBufferCGBitmapContextCompatibilityKey as String: true]
-        guard CVPixelBufferCreate(kCFAllocatorDefault, frameWidth, frameHeight, kCVPixelFormatType_32ARGB, options as CFDictionary?, &bufferOptional) == kCVReturnSuccess,
+        let options = [kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue, kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue] as CFDictionary
+        guard CVPixelBufferCreate(kCFAllocatorDefault, frameWidth, frameHeight, kCVPixelFormatType_32ARGB, options, &bufferOptional) == kCVReturnSuccess,
             let buffer = bufferOptional else {
-            print("newPixelBufferFrom: newPixelBuffer failed")
+            DbLog("newPixelBufferFrom: newPixelBuffer failed")
             return nil
         }
         
         CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
         let pxdata = CVPixelBufferGetBaseAddress(buffer)
         let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(data: pxdata, width: frameWidth, height: frameHeight, bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(buffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue) else {
-            print("context is nil")
+        guard let context = CGContext(data: pxdata, width: frameWidth, height: frameHeight, bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(buffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
+        else {
+            DbLog("context is nil")
             return nil
         }
         
-        context.concatenate(CGAffineTransform.identity)
+        UIGraphicsPushContext(context)
         context.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+        UIGraphicsPopContext()
         CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
         return buffer
     }
 }
-
-extension UIImage {
-    var cgImageInCorrectOrientation: CGImage? {
-         UIGraphicsBeginImageContext(size)
-        guard let context = UIGraphicsGetCurrentContext(), let cgImage = cgImage else {
-            print("failed to get context to flip orirentation")
-            return self.cgImage
-        }
-        
-        // Move the origin to the middle of the image so we will rotate and scale around the center.
-        context.translateBy(x: size.width/2, y: size.height/2)
-        
-        // Rotate the image context, then flip hroizontally, then draw
-        context.rotate(by: CGFloat.pi)
-        context.scaleBy(x: -1.0, y: -1.0)
-        context.draw(cgImage, in: CGRect(x: -size.width/2, y: -size.height/2, width: size.width, height: size.height))
-        
-        let newImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        return newImage?.cgImage
-    }
-}
-
-

@@ -23,7 +23,7 @@ open class BasicOperation: ImageProcessingOperation {
     public var useMetalPerformanceShaders: Bool = false {
         didSet {
             if !sharedMetalRenderingDevice.metalPerformanceShadersAreSupported {
-                print("Warning: Metal Performance Shaders are not supported on this device")
+                DbLog("Warning: Metal Performance Shaders are not supported on this device")
                 useMetalPerformanceShaders = false
             }
         }

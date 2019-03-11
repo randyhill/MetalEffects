@@ -6,6 +6,7 @@ class ViewController: UIViewController, CameraDelegate {
     @IBOutlet weak var renderView: RenderView!
     @IBOutlet weak var FPSLabel: UILabel!
     @IBOutlet weak var recordButton: UIButton!
+    @IBOutlet weak var messageView: UILabel!
     var camera:Camera!
     var saturation = SaturationAdjustment()
     var brightness = BrightnessAdjustment()
@@ -17,33 +18,37 @@ class ViewController: UIViewController, CameraDelegate {
         
         do {
             recordButton.layer.cornerRadius = 8
-            
-            camera = try Camera(sessionPreset: .vga640x480)
+            messageView.isHidden = true
+            messageView.layer.cornerRadius = 8
+            messageView.layer.masksToBounds = true
+
+            camera = try Camera(sessionPreset: .hd1920x1080)
             camera.delegate = self
-            camera.runBenchmark = true
-            // camera --> brightness --> saturation --> contrast --> renderView
+             // camera --> brightness --> saturation --> contrast --> renderView
             camera.addTarget(brightness)
             camera.addTarget(saturation)
             camera.addTarget(contrast)
             camera.addTarget(renderView)
             camera.startCapture()
+            
+            NotificationCenter.default.addObserver(self, selector: #selector(videoSaved), name: VideoCapture.VideoSaved, object: nil)
         } catch {
             fatalError("Could not initialize rendering pipeline: \(error)")
         }
     }
     
-    func didCaptureBuffer(_ sampleBuffer: CMSampleBuffer) {
+    @objc func videoSaved() {
+        DispatchQueue.main.async {
+            self.messageView.isHidden = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0 , execute: {
+                self.messageView.isHidden = true
+            })
+        }
     }
     
-    let startTime = Date()
-    func frameTime(average: Double, current: Double) {
-        let fps = Int(1000.0/current)
-        let timeInterval = Date().timeIntervalSince(startTime)
-        let string = String(format: "Time: %.02, Ave: %.02f, Current: %.02f", Double(timeInterval), average, current)
-        print(string)
-        //print("Time: \(timeInterval) average: \(average) current: \(current)")
+     func averageFrameTime(_ average: Double) {
         DispatchQueue.main.async {
-            self.FPSLabel.text = "FPS: \(fps)"
+            self.FPSLabel.text = "FPS: \(Int(average))"
         }
     }
 

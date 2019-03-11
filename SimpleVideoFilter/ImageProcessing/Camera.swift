@@ -3,8 +3,7 @@ import AVFoundation
 import Metal
 
 public protocol CameraDelegate {
-    func didCaptureBuffer(_ sampleBuffer: CMSampleBuffer)
-    func frameTime(average: Double, current: Double)
+    func averageFrameTime(_ average: Double)
 }
 
 public enum PhysicalCameraLocation {
@@ -40,9 +39,6 @@ public enum PhysicalCameraLocation {
 public struct CameraError: Error {
 }
 
-let initialBenchmarkFramesToIgnore = 5
-
-
 public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBufferDelegate {
 
     public var location:PhysicalCameraLocation {
@@ -50,9 +46,6 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
             // TODO: Swap the camera locations, framebuffers as needed
         }
     }
-    public var runBenchmark:Bool = false
-    public var logFPS:Bool = false
-    
     public let targets = TargetContainer()
     public var delegate: CameraDelegate?
     public let captureSession:AVCaptureSession
@@ -64,12 +57,9 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
     let frameRenderingSemaphore = DispatchSemaphore(value:1)
     let cameraProcessingQueue = DispatchQueue.global()
     let cameraFrameProcessingQueue = DispatchQueue(
-        label: "com.sunsetlakesoftware.GPUImage.cameraFrameProcessingQueue",
+        label: "com.cameraFrameProcessingQueue",
         attributes: [])
     
-    let framesToIgnore = 5
-    var numberOfFramesCaptured = 0
-    var totalFrameTimeDuringCapture:Double = 0.0
     var framesSinceLastCheck = 0
     var lastCheckTime = CFAbsoluteTimeGetCurrent()
     
@@ -82,8 +72,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                 recordedFrames.removeAll()
             } else {
                 // Save to camera roll
-                recordedFrames.saveToDiskWithAverageFrameTime(averageFrameMilliseconds())
-            }
+                recordedFrames.saveToDisk()            }
         }
     }
     private var recordedFrames = VideoCapture()
@@ -103,6 +92,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
         } else {
             if let device = location.device() {
                 self.inputCamera = device
+                inputCamera.set(frameRate: 60)
             } else {
                 self.videoInput = nil
                 self.videoOutput = nil
@@ -156,28 +146,27 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
         }
     }
     
-    private func averageFrameMilliseconds() -> Int64 {
-        let average = totalFrameTimeDuringCapture / Double(self.numberOfFramesCaptured - initialBenchmarkFramesToIgnore)
-        return Int64(average * 1000)
-    }
-    
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         
-        guard (frameRenderingSemaphore.wait(timeout:DispatchTime.now()) == DispatchTimeoutResult.success) else { return }
-        
-        let startTime = CFAbsoluteTimeGetCurrent()
-        
-        let cameraFrame = CMSampleBufferGetImageBuffer(sampleBuffer)!
+        DbOnMainThread(false)
+        DbProfilePoint("1")
+        guard (frameRenderingSemaphore.wait(timeout:DispatchTime.now()) == DispatchTimeoutResult.success) else {
+            return DbLog("Semaphore Error")
+        }
+        guard let cameraFrame = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return DbLog("Couldn't get image buffer")
+        }
+        let frameStartTime = CFAbsoluteTimeGetCurrent()
         let bufferWidth = CVPixelBufferGetWidth(cameraFrame)
         let bufferHeight = CVPixelBufferGetHeight(cameraFrame)
-//        let currentTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-        
         CVPixelBufferLockBaseAddress(cameraFrame, CVPixelBufferLockFlags(rawValue:CVOptionFlags(0)))
         
+        DbProfilePoint("2")
         cameraFrameProcessingQueue.async {
-            self.delegate?.didCaptureBuffer(sampleBuffer)
+            DbProfilePoint("3")
             CVPixelBufferUnlockBaseAddress(cameraFrame, CVPixelBufferLockFlags(rawValue:CVOptionFlags(0)))
-            
+            DbProfilePoint("4")
+
             var textureRef:CVMetalTexture? = nil
             let _ = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
                                                               self.videoTextureCache!,
@@ -189,44 +178,41 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                                                               0,
                                                               &textureRef)
             
+            DbProfilePoint("5")
             if let concreteTexture = textureRef,
                 let cameraTexture = CVMetalTextureGetTexture(concreteTexture) {
                 let inputTexture = Texture(orientation: self.location.imageOrientation(), texture: cameraTexture)
                 let outputTexture = self.updateTargetsWithTexture(inputTexture)
+                DbProfilePoint("6")
                 if self.isRecording {
-                    let currentFrameTime = (CFAbsoluteTimeGetCurrent() - startTime)
-                    let frameMilliseconds = 1000*currentFrameTime
-                    self.recordedFrames.addFrame(outputTexture, milliseconds: Int64(frameMilliseconds))
+                    let frameTime = (CFAbsoluteTimeGetCurrent() - frameStartTime)
+                    self.recordedFrames.addFrame(outputTexture, milliseconds: Int64(1000*frameTime))
                 }
-            }
             
-            if self.runBenchmark {
-                self.numberOfFramesCaptured += 1
-                if (self.numberOfFramesCaptured > initialBenchmarkFramesToIgnore) {
-                    let currentFrameTime = (CFAbsoluteTimeGetCurrent() - startTime)
-                    self.totalFrameTimeDuringCapture += currentFrameTime
-                    let average = 1000.0 * self.totalFrameTimeDuringCapture / Double(self.numberOfFramesCaptured - initialBenchmarkFramesToIgnore)
-                    self.delegate?.frameTime(average: average, current: 1000.0 * currentFrameTime)
-                }
-            }
-
-            if self.logFPS {
-                if ((CFAbsoluteTimeGetCurrent() - self.lastCheckTime) > 1.0) {
-                    self.lastCheckTime = CFAbsoluteTimeGetCurrent()
-                    self.framesSinceLastCheck = 0
-                }
-
+                // Benchmarking FPS
+                let timeSinceLastCheck = CFAbsoluteTimeGetCurrent() - self.lastCheckTime
                 self.framesSinceLastCheck += 1
+                if (timeSinceLastCheck > 1.0) {
+                    let average = Double(self.framesSinceLastCheck)/timeSinceLastCheck
+                    self.delegate?.averageFrameTime(average)
+                    self.resetBenchmarks()
+                }
             }
 
             self.frameRenderingSemaphore.signal()
+            DbProfilePoint("7")
         }
+        DbProfilePoint("8")
+    }
+    
+    private func resetBenchmarks() {
+        lastCheckTime = CFAbsoluteTimeGetCurrent()
+        framesSinceLastCheck = 0
     }
     
     public func startCapture() {
-        self.numberOfFramesCaptured = 0
-        self.totalFrameTimeDuringCapture = 0
-        
+        resetBenchmarks()
+ 
         if (!captureSession.isRunning) {
             captureSession.startRunning()
         }
@@ -240,5 +226,24 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
     
     public func transmitPreviousImage(to target: ImageConsumer, atIndex: UInt) {
         // Not needed for camera
+    }
+}
+
+extension AVCaptureDevice {
+    func set(frameRate: Double) {
+        guard let range = activeFormat.videoSupportedFrameRateRanges.first,
+            range.minFrameRate...range.maxFrameRate ~= frameRate
+            else {
+                DbLog("Requested FPS is not supported by the device's activeFormat !")
+                return
+        }
+        
+        do { try lockForConfiguration()
+            activeVideoMinFrameDuration = CMTimeMake(1, Int32(frameRate))
+            activeVideoMaxFrameDuration = CMTimeMake(1, Int32(frameRate))
+            unlockForConfiguration()
+        } catch {
+            DbLog("LockForConfiguration failed with error: \(error.localizedDescription)")
+        }
     }
 }
