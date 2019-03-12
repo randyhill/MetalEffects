@@ -28,6 +28,38 @@ public class VideoWriter: NSObject {
     var fileURL: URL
     var delegate: VideoCaptureProtocol?
     
+    static func preMakePixelBufferContext(_ videoSettings: [String : Any]) -> (buffer: CVPixelBuffer, context: CGContext)? {
+        var bufferOptional: CVPixelBuffer?
+        DbProfilePoint()
+        guard let frameWidth = videoSettings[AVVideoWidthKey] as? Int else {
+            DbLog("newPixelBufferFrom: could not find frameWidth")
+            return nil
+        }
+        guard let frameHeight = videoSettings[AVVideoHeightKey] as? Int else {
+            DbLog("newPixelBufferFrom: could not find frameHeight")
+            return nil
+        }
+        let options = [kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue, kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue] as CFDictionary
+        DbProfilePoint()
+        guard CVPixelBufferCreate(kCFAllocatorDefault, frameWidth, frameHeight, kCVPixelFormatType_32ARGB, options, &bufferOptional) == kCVReturnSuccess,
+            let buffer = bufferOptional else {
+                DbLog("newPixelBufferFrom: newPixelBuffer failed")
+                return nil
+        }
+        DbProfilePoint()
+        
+        CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
+        let pxdata = CVPixelBufferGetBaseAddress(buffer)
+        let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(data: pxdata, width: frameWidth, height: frameHeight, bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(buffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
+            else {
+                DbLog("context is nil")
+                return nil
+        }
+        DbProfilePoint()
+        return (buffer, context)
+    }
+    
     private var videoSettings: [String : Any]
     private var timeScale: Int32
     private let mediaInputQueue = DispatchQueue(label: "mediaInputQueue")
@@ -37,39 +69,6 @@ public class VideoWriter: NSObject {
     private let writeInput: AVAssetWriterInput
     private let bufferAdapter: AVAssetWriterInputPixelBufferAdaptor
     public init?(videoSettings: [String: Any], timeScale: Int32) {
-        // Declared within init because we want to use before self is compoleted.
-        func preMakePixelBufferContext() -> (buffer: CVPixelBuffer, context: CGContext)? {
-            var bufferOptional: CVPixelBuffer?
-            DbProfilePoint()
-            guard let frameWidth = videoSettings[AVVideoWidthKey] as? Int else {
-                DbLog("newPixelBufferFrom: could not find frameWidth")
-                return nil
-            }
-            guard let frameHeight = videoSettings[AVVideoHeightKey] as? Int else {
-                DbLog("newPixelBufferFrom: could not find frameHeight")
-                return nil
-            }
-            let options = [kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue, kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue] as CFDictionary
-            DbProfilePoint()
-            guard CVPixelBufferCreate(kCFAllocatorDefault, frameWidth, frameHeight, kCVPixelFormatType_32ARGB, options, &bufferOptional) == kCVReturnSuccess,
-                let buffer = bufferOptional else {
-                    DbLog("newPixelBufferFrom: newPixelBuffer failed")
-                    return nil
-            }
-            DbProfilePoint()
-            
-            CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
-            let pxdata = CVPixelBufferGetBaseAddress(buffer)
-            let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
-            guard let context = CGContext(data: pxdata, width: frameWidth, height: frameHeight, bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(buffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
-                else {
-                    DbLog("context is nil")
-                    return nil
-            }
-            DbProfilePoint()
-            return (buffer, context)
-        }
-        
         // First get temp file URL
         let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
         let tempPath = paths[0] + "/exportVideo.mp4"
@@ -97,7 +96,7 @@ public class VideoWriter: NSObject {
             assetWriter.add(writeInput)
             assetWriter.startWriting()
             assetWriter.startSession(atSourceTime: kCMTimeZero)
-            guard let pixelBufferValues = preMakePixelBufferContext() else {
+            guard let pixelBufferValues = VideoWriter.preMakePixelBufferContext(videoSettings) else {
                 return nil
             }
             pixelBufferConversionContext = pixelBufferValues.context
@@ -108,6 +107,7 @@ public class VideoWriter: NSObject {
             return nil
         }
     }
+
     
 //    fileprivate var currentWriters = [Int: SectionWriter]()
     func writeVideoFramesToMovie(_ videoFrames: [VideoFrame], section: Int, completion: @escaping (URL) -> Void){
@@ -165,15 +165,15 @@ public class VideoWriter: NSObject {
         }
     }
     
-    let context = CIContext(options: nil)
-    private func convertCIImageToCGImage(inputImage: CIImage) -> CGImage? {
-        DbProfilePoint()
-        if let cgImage = context.createCGImage(inputImage, from: inputImage.extent) {
-            DbProfilePoint()
-            return cgImage
-        }
-        return nil
-    }
+//    let context = CIContext(options: nil)
+//    private func convertCIImageToCGImage(inputImage: CIImage) -> CGImage? {
+//        DbProfilePoint()
+//        if let cgImage = context.createCGImage(inputImage, from: inputImage.extent) {
+//            DbProfilePoint()
+//            return cgImage
+//        }
+//        return nil
+//    }
     
     private func fillBufferFrom(cgImage: CGImage, videoSettings: [String : Any]) -> CVPixelBuffer? {
         DbProfilePoint()
