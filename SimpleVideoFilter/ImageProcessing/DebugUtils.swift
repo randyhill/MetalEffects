@@ -21,10 +21,32 @@ private func dateString() -> String {
 }
 
 func DbLog(_ message: String, function: String = #function, line: Int = #line) {
-    print("ERROR: \(message), at \(function):\(line) \(dateString())")
+    print("DBLOG: \(message), at \(function):\(line) at time: \(dateString())")
 }
 
+var profileKeys = [String: TimeInterval]()
+var lastTime: Date?
+func DbProfilePoint(_ key: String = "", function: String = #function, line: Int = #line) {
+    print("Profile Point: \(dateString()), \(key) at \(function):\(line)")
+    if let lastTime = lastTime {
+        let pointTime = Date().timeIntervalSince(lastTime)
+        let previousTime = profileKeys[key] ?? 0.0
+        profileKeys[key] = pointTime + previousTime
+    }
+    lastTime = Date()
+}
 
-func DbProfilePoint(_ message: String = "", function: String = #function, line: Int = #line) {
-    print("Profile Point: \(dateString()), \(message) at \(function):\(line)")
+func DbPrintProfileSummary(_ message: String = "", function: String = #function, line: Int = #line) {
+    print("Profile Summary: \(message), at \(function):\(line) at time: \(dateString())")
+    for (key, totalTime) in profileKeys {
+        print("Total time: %.3f %s", totalTime, key)
+    }
+    profileKeys.removeAll()
+    lastTime = nil
+}
+
+func DbAssert(_ isTrue: Bool, function: String = #function, line: Int = #line) {
+    if isTrue{
+        DbLog("ASSERT FAILED", function: function, line: line)
+    }
 }
