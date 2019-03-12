@@ -132,17 +132,14 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
             return DbLog("Trying to start video recording when already started")
         }
         let dimensions = CMVideoFormatDescriptionGetDimensions(inputCamera.activeFormat.formatDescription)
-        videoRecorder = VideoCapture(width: Int(dimensions.width), height: Int(dimensions.height))
-//        DispatchQueue.global().async {
-//            self.fileOutput.startRecording(to: fileURL, recordingDelegate: videoDelegate)
-//        }
+        videoRecorder = VideoCapture(metalDevice: sharedMetalRenderingDevice.device, width: Int(dimensions.width), height: Int(dimensions.height))
     }
 
     func stopRecording() {
-        guard videoRecorder != nil else {
+        guard let videoRecorder = videoRecorder else {
             return DbLog("Trying to stop video recording when already stopped")
         }
-//        videoRecorder.saveToCameraRoll()
+        videoRecorder.stopRecording()
         self.videoRecorder = nil
     }
     
@@ -154,7 +151,6 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
         guard let cameraFrame = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return DbLog("Couldn't get image buffer")
         }
-        let frameStartTime = CFAbsoluteTimeGetCurrent()
         let bufferWidth = CVPixelBufferGetWidth(cameraFrame)
         let bufferHeight = CVPixelBufferGetHeight(cameraFrame)
         CVPixelBufferLockBaseAddress(cameraFrame, CVPixelBufferLockFlags(rawValue:CVOptionFlags(0)))
@@ -172,7 +168,6 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                 let inputTexture = Texture(orientation: self.location.imageOrientation(), texture: cameraTexture)
                 let outputTexture = self.updateTargetsWithTexture(inputTexture)
                 if let videoRecorder = self.videoRecorder {
-                    let frameTime = (CFAbsoluteTimeGetCurrent() - frameStartTime)
                     videoRecorder.addFrame(outputTexture)
                 }
             
