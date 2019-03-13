@@ -157,7 +157,9 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
         cameraFrameProcessingQueue.async {
             CVPixelBufferUnlockBaseAddress(cameraFrame, CVPixelBufferLockFlags(rawValue:CVOptionFlags(0)))
             var textureRef:CVMetalTexture? = nil
-            guard let videoTextureCache = self.videoTextureCache, CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, videoTextureCache, cameraFrame, nil, .bgra8Unorm, bufferWidth, bufferHeight, 0, &textureRef) == kCVReturnSuccess else {
+            guard let videoTextureCache = self.videoTextureCache,
+                    CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, videoTextureCache, cameraFrame, nil, .bgra8Unorm, bufferWidth, bufferHeight, 0, &textureRef) == kCVReturnSuccess
+            else {
                 DbLog("Failed to create texture from frame.")
                 return
             }
