@@ -6,7 +6,7 @@ public class ShaderUniformSettings {
     private var uniformValueOffsets:[Int] = []
     public var colorUniformsUseAlpha:Bool = false
     let shaderUniformSettingsQueue = DispatchQueue(
-        label: "com.sunsetlakesoftware.GPUImage.shaderUniformSettings",
+        label: "com.GPUImage.shaderUniformSettings",
         attributes: [])
     let uniformLookupTable:[String:Int]
 

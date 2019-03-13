@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:">
+      location = "self:/Users/randy/source/Swift/SimpleVideoFilter/MetalEffects.xcodeproj">
    </FileRef>
 </Workspace>

@@ -23,9 +23,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Camera image processing</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Please give access to your photo library so your videos can be saved there</string>
+	<string>Please give MetalEffects access to your photo library so your videos can be saved there</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Please give SimpleVideofilter access to your photo library to let it saved videos for you</string>
+	<string>Please give MetalEffects access to your photo library to let it saved videos for you</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

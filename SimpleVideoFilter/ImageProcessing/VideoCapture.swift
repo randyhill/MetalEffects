@@ -1,6 +1,6 @@
 //
 //  VideoFile.swift
-//  SimpleVideoFilter
+//  MetalEffects
 //
 //  Created by Randy Hill on 3/9/19.
 //  Copyright © 2019 Red Queen Coder, LLC. All rights reserved.
