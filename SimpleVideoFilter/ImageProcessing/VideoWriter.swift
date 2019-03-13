@@ -11,9 +11,7 @@ import AVFoundation
 import UIKit
 
 public class VideoWriter: NSObject {
-    var fileURL: URL
-    
-    static func preMakePixelBufferContext(_ videoSettings: [String : Any]) -> (buffer: CVPixelBuffer, context: CGContext)? {
+    private static func preBuildPixelBufferContext(_ videoSettings: [String : Any]) -> (buffer: CVPixelBuffer, context: CGContext)? {
         var bufferOptional: CVPixelBuffer?
         guard let frameWidth = videoSettings[AVVideoWidthKey] as? Int else {
             DbLog("newPixelBufferFrom: could not find frameWidth")
@@ -42,15 +40,15 @@ public class VideoWriter: NSObject {
     }
     
     private var videoSettings: [String : Any]
-    private var timeScale: Int32
     private let mediaInputQueue = DispatchQueue(label: "mediaInputQueue")
-    private var pixelBufferConversionBuffer: CVPixelBuffer
-    private var pixelBufferConversionContext: CGContext
     private var assetWriter: AVAssetWriter?
     private var writeInput: AVAssetWriterInput?
     private var bufferAdapter: AVAssetWriterInputPixelBufferAdaptor?
+    private var fileURL: URL
+    private var pixelBufferConversionBuffer: CVPixelBuffer
+    private var pixelBufferConversionContext: CGContext
     
-    public init?(videoSettings: [String: Any], timeScale: Int32) {
+    public init?(videoSettings: [String: Any]) {
         // First get temp file URL
         let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
         let tempPath = paths[0] + "/exportVideo.mp4"
@@ -63,10 +61,8 @@ public class VideoWriter: NSObject {
             }
         }
         
-        // Create writers.
         self.videoSettings = videoSettings
-        self.timeScale = timeScale
-        guard let pixelBufferValues = VideoWriter.preMakePixelBufferContext(videoSettings) else {
+        guard let pixelBufferValues = VideoWriter.preBuildPixelBufferContext(videoSettings) else {
             return nil
         }
         pixelBufferConversionContext = pixelBufferValues.context
@@ -76,9 +72,9 @@ public class VideoWriter: NSObject {
     
     private func startWriting(_ frame: VideoFrame) {
         do {
-            // Create writer for this section
             let writeInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
             writeInput.expectsMediaDataInRealTime = true
+            
             let bufferAttributes:[String: Any] = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32ARGB)]
             bufferAdapter = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: writeInput, sourcePixelBufferAttributes: bufferAttributes)
             

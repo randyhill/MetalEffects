@@ -9,6 +9,7 @@
 import UIKit
 import AVFoundation
 import Photos
+import Accelerate
 
 public struct VideoFrame {
     let cgImage: CGImage
@@ -40,7 +41,7 @@ class VideoCapture {
         self.metalDevice = metalDevice
         self.context = CIContext(mtlDevice: metalDevice, options: nil)
         let videoSettings = VideoCapture.videoSettings(width: width, height: height)
-        guard let writer = VideoWriter(videoSettings: videoSettings, timeScale: 1000) else {
+        guard let writer = VideoWriter(videoSettings: videoSettings) else {
             DbLog("Couldnt' create video writer")
             return nil
         }
@@ -53,31 +54,27 @@ class VideoCapture {
         let frameIndex = frameCount
         
         syncQueue.sync {
-            // Save as CIImage to minimize processing time until it's saved.
+            DbProfilePoint()
             let kciOptions = [kCIImageColorSpace: CGColorSpaceCreateDeviceRGB(),
                               kCIContextOutputPremultiplied: true,
                               kCIContextUseSoftwareRenderer: false] as [String : Any]
             guard let ciImage = CIImage(mtlTexture: newFrame.texture, options: kciOptions) else {
                 return DbLog("Couldn't generate ci image")
             }
-            guard let cgImage = self.convertCIImageToCGImage(inputImage: ciImage) else {
+            DbProfilePoint()
+            guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
                 return DbLog("Couldn't generate cg image")
             }
+            DbProfilePoint()
             self.videoWriter.writeVideoFrameToMovie(VideoFrame(cgImage: cgImage, presentTime: presentTime, index: frameIndex))
+            DbProfilePoint()
          }
     }
     
-    private func convertCIImageToCGImage(inputImage: CIImage) -> CGImage? {
-        if let cgImage = context.createCGImage(inputImage, from: inputImage.extent) {
-             return cgImage
-        }
-        return nil
-    }
-    
     func stopRecording() {
+        DbPrintProfileSummary()
         syncQueue.sync {
             videoWriter.completeWriting { (fileURl) in
-                DbLog("Finished writing file")
                 self.getCameraRollPermissions(fileURL: fileURl)
             }
         }
@@ -96,18 +93,17 @@ class VideoCapture {
     
     private func _saveToCameraRoll(_ fileURL: URL) {
         DbOnMainThread(false)
-        DbLog("Writing file to camera roll")
-            PHPhotoLibrary.shared().performChanges({
-                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
-            }) { saved, error in
-                if let error = error {
-                    DbLog("Could not save video to library: \(error)")
-                }
-                else if saved {
-                    NotificationCenter.default.post(Notification(name: VideoCapture.VideoSaved))
-                }  else {
-                    DbLog("weird error saving video to library")
-                }
+         PHPhotoLibrary.shared().performChanges({
+            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+        }) { saved, error in
+            if let error = error {
+                DbLog("Could not save video to library: \(error)")
             }
+            else if saved {
+                NotificationCenter.default.post(Notification(name: VideoCapture.VideoSaved))
+            }  else {
+                DbLog("weird error saving video to library")
+            }
+        }
     }
 }
