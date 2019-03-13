@@ -132,7 +132,6 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
             return DbLog("Trying to start video recording when already started")
         }
         let dimensions = CMVideoFormatDescriptionGetDimensions(inputCamera.activeFormat.formatDescription)
-        print("Init seconds: \(CACurrentMediaTime()))")
         videoRecorder = VideoCapture(metalDevice: sharedMetalRenderingDevice.device, width: Int(dimensions.width), height: Int(dimensions.height))
     }
 
@@ -145,11 +144,8 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
     }
     
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-        print("Capture  seconds: \(CACurrentMediaTime()) presentation:\(presentationTime.seconds)")
-        
         guard (frameRenderingSemaphore.wait(timeout:DispatchTime.now()) == DispatchTimeoutResult.success) else {
-            return DbLog("Semaphore Error")
+            return DbLog("Frame Rendering Semaphore timed out")
         }
         guard let cameraFrame = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return DbLog("Couldn't get image buffer")
@@ -171,6 +167,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                 let inputTexture = Texture(orientation: self.location.imageOrientation(), texture: cameraTexture)
                 let outputTexture = self.updateTargetsWithTexture(inputTexture)
                 if let videoRecorder = self.videoRecorder {
+                    let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
                     videoRecorder.addFrame(outputTexture, presentTime: presentationTime)
                 }
             

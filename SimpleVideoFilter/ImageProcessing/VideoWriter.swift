@@ -15,7 +15,6 @@ public class VideoWriter: NSObject {
     
     static func preMakePixelBufferContext(_ videoSettings: [String : Any]) -> (buffer: CVPixelBuffer, context: CGContext)? {
         var bufferOptional: CVPixelBuffer?
-        DbProfilePoint()
         guard let frameWidth = videoSettings[AVVideoWidthKey] as? Int else {
             DbLog("newPixelBufferFrom: could not find frameWidth")
             return nil
@@ -25,13 +24,11 @@ public class VideoWriter: NSObject {
             return nil
         }
         let options = [kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue, kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue] as CFDictionary
-        DbProfilePoint()
         guard CVPixelBufferCreate(kCFAllocatorDefault, frameWidth, frameHeight, kCVPixelFormatType_32ARGB, options, &bufferOptional) == kCVReturnSuccess,
             let buffer = bufferOptional else {
                 DbLog("newPixelBufferFrom: newPixelBuffer failed")
                 return nil
         }
-        DbProfilePoint()
         
         CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
         let pxdata = CVPixelBufferGetBaseAddress(buffer)
@@ -41,7 +38,6 @@ public class VideoWriter: NSObject {
                 DbLog("context is nil")
                 return nil
         }
-        DbProfilePoint()
         return (buffer, context)
     }
     
@@ -114,9 +110,7 @@ public class VideoWriter: NSObject {
             pixelBuffer = self.fillBufferFrom(cgImage: frame.cgImage, videoSettings: self.videoSettings)
         }
         if let pixelBuffer = pixelBuffer {
-            DbProfilePoint()
             bufferAdapter.append(pixelBuffer, withPresentationTime: frame.presentTime)
-            DbProfilePoint()
         } else {
             DbLog("Dropped frame: Nil buffer")
         }
@@ -132,12 +126,10 @@ public class VideoWriter: NSObject {
     }
     
     private func fillBufferFrom(cgImage: CGImage, videoSettings: [String : Any]) -> CVPixelBuffer? {
-        DbProfilePoint()
         UIGraphicsPushContext(pixelBufferConversionContext)
         pixelBufferConversionContext.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
         UIGraphicsPopContext()
         CVPixelBufferUnlockBaseAddress(pixelBufferConversionBuffer, CVPixelBufferLockFlags(rawValue: 0))
-        DbProfilePoint()
         return pixelBufferConversionBuffer
     }
 }
