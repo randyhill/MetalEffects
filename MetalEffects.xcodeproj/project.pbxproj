@@ -29,7 +29,6 @@
 		25E353FE22331D9F005369CB /* BrightnessAdjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353D822331CA2005369CB /* BrightnessAdjustment.swift */; };
 		25E353FF22331D9F005369CB /* ContrastAdjustment.metal in Sources */ = {isa = PBXBuildFile; fileRef = 25E353CC22331CA2005369CB /* ContrastAdjustment.metal */; };
 		25E3540022331D9F005369CB /* ContrastAdjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E353D922331CA2005369CB /* ContrastAdjustment.swift */; };
-		25E3540122331DA7005369CB /* NearbyTexelSampling.metal in Sources */ = {isa = PBXBuildFile; fileRef = 25E353D722331CA2005369CB /* NearbyTexelSampling.metal */; };
 		25E3540222331DA7005369CB /* Passthrough.metal in Sources */ = {isa = PBXBuildFile; fileRef = 25E353DC22331CA2005369CB /* Passthrough.metal */; };
 		25E3540322331DA7005369CB /* SaturationAdjustment.metal in Sources */ = {isa = PBXBuildFile; fileRef = 25E353DA22331CA2005369CB /* SaturationAdjustment.metal */; };
 		25E3540722332F09005369CB /* Assets-iOS.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 25E3540622332F09005369CB /* Assets-iOS.xcassets */; };
@@ -61,11 +60,9 @@
 		25E353C922331CA2005369CB /* ShaderUniformSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderUniformSettings.swift; sourceTree = "<group>"; };
 		25E353CA22331CA2005369CB /* Pipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pipeline.swift; sourceTree = "<group>"; };
 		25E353CC22331CA2005369CB /* ContrastAdjustment.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ContrastAdjustment.metal; sourceTree = "<group>"; };
-		25E353CD22331CA2005369CB /* TexelSamplingTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TexelSamplingTypes.h; sourceTree = "<group>"; };
 		25E353CE22331CA2005369CB /* BrightnessAdjustment.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = BrightnessAdjustment.metal; sourceTree = "<group>"; };
 		25E353CF22331CA2005369CB /* SaturationAdjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaturationAdjustment.swift; sourceTree = "<group>"; };
 		25E353D022331CA2005369CB /* OperationShaderTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OperationShaderTypes.h; sourceTree = "<group>"; };
-		25E353D722331CA2005369CB /* NearbyTexelSampling.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = NearbyTexelSampling.metal; sourceTree = "<group>"; };
 		25E353D822331CA2005369CB /* BrightnessAdjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightnessAdjustment.swift; sourceTree = "<group>"; };
 		25E353D922331CA2005369CB /* ContrastAdjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContrastAdjustment.swift; sourceTree = "<group>"; };
 		25E353DA22331CA2005369CB /* SaturationAdjustment.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SaturationAdjustment.metal; sourceTree = "<group>"; };
@@ -86,7 +83,7 @@
 		25E3540622332F09005369CB /* Assets-iOS.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets-iOS.xcassets"; sourceTree = "<group>"; };
 		25E3544A223465D8005369CB /* VideoCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCapture.swift; sourceTree = "<group>"; };
 		25E3544C22347552005369CB /* VideoWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoWriter.swift; sourceTree = "<group>"; };
-		BCE0BEB320D6E8C20006E120 /* SimpleVideoFilter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleVideoFilter.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BCE0BEB320D6E8C20006E120 /* MetalEffects.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetalEffects.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCE0BEB620D6E8C20006E120 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BCE0BEB820D6E8C20006E120 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		BCE0BEBB20D6E8C20006E120 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -141,12 +138,10 @@
 				25E353CC22331CA2005369CB /* ContrastAdjustment.metal */,
 				25E353D922331CA2005369CB /* ContrastAdjustment.swift */,
 				25E353DF22331CA2005369CB /* GPUImage.h */,
-				25E353D722331CA2005369CB /* NearbyTexelSampling.metal */,
 				25E353D022331CA2005369CB /* OperationShaderTypes.h */,
 				25E353DC22331CA2005369CB /* Passthrough.metal */,
 				25E353DA22331CA2005369CB /* SaturationAdjustment.metal */,
 				25E353CF22331CA2005369CB /* SaturationAdjustment.swift */,
-				25E353CD22331CA2005369CB /* TexelSamplingTypes.h */,
 			);
 			path = Operations;
 			sourceTree = "<group>";
@@ -162,7 +157,7 @@
 		BCE0BEB420D6E8C20006E120 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BCE0BEB320D6E8C20006E120 /* SimpleVideoFilter.app */,
+				BCE0BEB320D6E8C20006E120 /* MetalEffects.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -184,9 +179,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		BCE0BEB220D6E8C20006E120 /* SimpleVideoFilter */ = {
+		BCE0BEB220D6E8C20006E120 /* MetalEffects */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = BCE0BEC520D6E8C40006E120 /* Build configuration list for PBXNativeTarget "SimpleVideoFilter" */;
+			buildConfigurationList = BCE0BEC520D6E8C40006E120 /* Build configuration list for PBXNativeTarget "MetalEffects" */;
 			buildPhases = (
 				BCE0BEAF20D6E8C20006E120 /* Sources */,
 				BCE0BEB020D6E8C20006E120 /* Frameworks */,
@@ -197,9 +192,9 @@
 			);
 			dependencies = (
 			);
-			name = SimpleVideoFilter;
+			name = MetalEffects;
 			productName = SimpleVideoFilter;
-			productReference = BCE0BEB320D6E8C20006E120 /* SimpleVideoFilter.app */;
+			productReference = BCE0BEB320D6E8C20006E120 /* MetalEffects.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -217,7 +212,7 @@
 					};
 				};
 			};
-			buildConfigurationList = BCE0BEAE20D6E8C20006E120 /* Build configuration list for PBXProject "SimpleVideoFilter" */;
+			buildConfigurationList = BCE0BEAE20D6E8C20006E120 /* Build configuration list for PBXProject "MetalEffects" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -230,7 +225,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				BCE0BEB220D6E8C20006E120 /* SimpleVideoFilter */,
+				BCE0BEB220D6E8C20006E120 /* MetalEffects */,
 			);
 		};
 /* End PBXProject section */
@@ -281,7 +276,6 @@
 				25E353F422331CC7005369CB /* Texture.swift in Sources */,
 				25E353F722331CC7005369CB /* Position.swift in Sources */,
 				25E353BC22331BC4005369CB /* Camera.swift in Sources */,
-				25E3540122331DA7005369CB /* NearbyTexelSampling.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -433,7 +427,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.redqueencoder.SimpleVideoFilter;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nvariance.MetalEffects;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -452,7 +446,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.redqueencoder.SimpleVideoFilter;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nvariance.MetalEffects;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -462,7 +456,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		BCE0BEAE20D6E8C20006E120 /* Build configuration list for PBXProject "SimpleVideoFilter" */ = {
+		BCE0BEAE20D6E8C20006E120 /* Build configuration list for PBXProject "MetalEffects" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BCE0BEC320D6E8C40006E120 /* Debug */,
@@ -471,7 +465,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		BCE0BEC520D6E8C40006E120 /* Build configuration list for PBXNativeTarget "SimpleVideoFilter" */ = {
+		BCE0BEC520D6E8C40006E120 /* Build configuration list for PBXNativeTarget "MetalEffects" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BCE0BEC620D6E8C40006E120 /* Debug */,
