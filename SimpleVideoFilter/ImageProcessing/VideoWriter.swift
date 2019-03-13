@@ -10,23 +10,8 @@ import Foundation
 import AVFoundation
 import UIKit
 
-private struct SectionWriter {
-    var writeInput: AVAssetWriterInput
-    var bufferAdapter: AVAssetWriterInputPixelBufferAdaptor
-    var writer: AVAssetWriter
-    var section: Int
-    
-//    func finishWriting() {
-//        writeInput.markAsFinished()
-//        writer.finishWriting {
-//            DbLog("Finished writing section: \(self.section) to disk")
-//        }
-//    }
-}
-
 public class VideoWriter: NSObject {
     var fileURL: URL
-    var delegate: VideoCaptureProtocol?
     
     static func preMakePixelBufferContext(_ videoSettings: [String : Any]) -> (buffer: CVPixelBuffer, context: CGContext)? {
         var bufferOptional: CVPixelBuffer?
@@ -65,9 +50,10 @@ public class VideoWriter: NSObject {
     private let mediaInputQueue = DispatchQueue(label: "mediaInputQueue")
     private var pixelBufferConversionBuffer: CVPixelBuffer
     private var pixelBufferConversionContext: CGContext
-    private let assetWriter: AVAssetWriter
-    private let writeInput: AVAssetWriterInput
-    private let bufferAdapter: AVAssetWriterInputPixelBufferAdaptor
+    private var assetWriter: AVAssetWriter?
+    private var writeInput: AVAssetWriterInput?
+    private var bufferAdapter: AVAssetWriterInputPixelBufferAdaptor?
+    
     public init?(videoSettings: [String: Any], timeScale: Int32) {
         // First get temp file URL
         let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
@@ -84,96 +70,66 @@ public class VideoWriter: NSObject {
         // Create writers.
         self.videoSettings = videoSettings
         self.timeScale = timeScale
-        
+        guard let pixelBufferValues = VideoWriter.preMakePixelBufferContext(videoSettings) else {
+            return nil
+        }
+        pixelBufferConversionContext = pixelBufferValues.context
+        pixelBufferConversionBuffer = pixelBufferValues.buffer
+        super.init()
+    }
+    
+    private func startWriting(_ frame: VideoFrame) {
         do {
             // Create writer for this section
-            writeInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
+            let writeInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
             writeInput.expectsMediaDataInRealTime = true
             let bufferAttributes:[String: Any] = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32ARGB)]
             bufferAdapter = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: writeInput, sourcePixelBufferAttributes: bufferAttributes)
             
-            assetWriter = try AVAssetWriter(url: fileURL, fileType: AVFileType.mov)
+            let assetWriter = try AVAssetWriter(url: fileURL, fileType: AVFileType.mov)
+            DbAssert(assetWriter.canAdd(writeInput))
             assetWriter.add(writeInput)
             assetWriter.startWriting()
-            assetWriter.startSession(atSourceTime: kCMTimeZero)
-            guard let pixelBufferValues = VideoWriter.preMakePixelBufferContext(videoSettings) else {
-                return nil
-            }
-            pixelBufferConversionContext = pixelBufferValues.context
-            pixelBufferConversionBuffer = pixelBufferValues.buffer
-            super.init()
+            assetWriter.startSession(atSourceTime: frame.presentTime)
+            self.writeInput = writeInput
+            self.assetWriter = assetWriter
         } catch {
             DbLog("Could not create asset writer: \(error)")
-            return nil
         }
     }
 
-    
-//    fileprivate var currentWriters = [Int: SectionWriter]()
-    func writeVideoFramesToMovie(_ videoFrames: [VideoFrame], section: Int, completion: @escaping (URL) -> Void){
-       let sectionWriter = SectionWriter(writeInput: writeInput, bufferAdapter: bufferAdapter, writer: assetWriter, section: section)
-        writeVideoFramesToWriterInput(sectionWriter) { (fileURl) in
-            completion(self.fileURL)
-        }
-    }
-    
-    fileprivate func writeVideoFramesToWriterInput(_ sectionWriter: SectionWriter, completion: @escaping (URL) -> Void){
+    func writeVideoFrameToMovie(_ frame: VideoFrame){
         DbOnMainThread(false)
-
-        // Write each frame in section to file
-        var totalMilliseconds: Int64?
-        var frameCount = 1
-        sectionWriter.writeInput.requestMediaDataWhenReady(on: mediaInputQueue){
+        guard let assetWriter = assetWriter, let bufferAdapter = bufferAdapter, let writeInput = writeInput else {
+            return startWriting(frame)
+        }
+        DbAssert(assetWriter.status == .writing)
+        DbOnMainThread(false)
+        guard writeInput.isReadyForMoreMediaData else {
+            return DbLog("Dropped frame")
+        }
+        var pixelBuffer: CVPixelBuffer?
+        autoreleasepool{
             DbOnMainThread(false)
-            while let count = self.delegate?.frameCount(), count > 0 {
-                if sectionWriter.writeInput.isReadyForMoreMediaData, let frame = self.delegate?.getFirstFrame() {
-                    var sampleBuffer: CVPixelBuffer?
-                    autoreleasepool{
-                        DbOnMainThread(false)
-                        sampleBuffer = self.fillBufferFrom(cgImage: frame.cgImage, videoSettings: self.videoSettings)
-                    }
-                    if let sampleBuffer = sampleBuffer {
-                        var curMSecs: Int64 = 0
-                        if let prevMilliseconds = totalMilliseconds {
-                            curMSecs = prevMilliseconds + frame.milliseconds
-                        }
-                        let presentTime = CMTimeMake(curMSecs, self.timeScale)
-                        DbProfilePoint()
-                        sectionWriter.bufferAdapter.append(sampleBuffer, withPresentationTime: presentTime)
-                        DbProfilePoint()
-                        totalMilliseconds = curMSecs
-                        frameCount += 1
-                    } else {
-                        DbLog("Got Nil buffer for frame")
-                    }
-                } else {
-                    DbLog("Write blocked")
-                }
-            }
-            completion(self.fileURL)
-            DbPrintProfileSummary("Section frames: \(frameCount)")
+            pixelBuffer = self.fillBufferFrom(cgImage: frame.cgImage, videoSettings: self.videoSettings)
+        }
+        if let pixelBuffer = pixelBuffer {
+            DbProfilePoint()
+            bufferAdapter.append(pixelBuffer, withPresentationTime: frame.presentTime)
+            DbProfilePoint()
+        } else {
+            DbLog("Dropped frame: Nil buffer")
         }
     }
     
     func completeWriting(_ completion: @escaping (URL) -> Void) {
-        let sectionWriter = SectionWriter(writeInput: writeInput, bufferAdapter: bufferAdapter, writer: assetWriter, section: 1)
-        writeVideoFramesToWriterInput(sectionWriter) { (fileURl) in
-            sectionWriter.writeInput.markAsFinished()
-            sectionWriter.writer.finishWriting {
-                 completion(self.fileURL)
+        writeInput?.markAsFinished()
+        assetWriter?.finishWriting {
+            DispatchQueue.main.async {
+                completion(self.fileURL)
             }
         }
     }
-    
-//    let context = CIContext(options: nil)
-//    private func convertCIImageToCGImage(inputImage: CIImage) -> CGImage? {
-//        DbProfilePoint()
-//        if let cgImage = context.createCGImage(inputImage, from: inputImage.extent) {
-//            DbProfilePoint()
-//            return cgImage
-//        }
-//        return nil
-//    }
     
     private func fillBufferFrom(cgImage: CGImage, videoSettings: [String : Any]) -> CVPixelBuffer? {
         DbProfilePoint()

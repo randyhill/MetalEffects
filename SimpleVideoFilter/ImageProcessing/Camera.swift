@@ -132,7 +132,8 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
             return DbLog("Trying to start video recording when already started")
         }
         let dimensions = CMVideoFormatDescriptionGetDimensions(inputCamera.activeFormat.formatDescription)
-        videoRecorder = VideoCapture(metalDevice: sharedMetalRenderingDevice.device, width: Int(dimensions.height), height: Int(dimensions.width))
+        print("Init seconds: \(CACurrentMediaTime()))")
+        videoRecorder = VideoCapture(metalDevice: sharedMetalRenderingDevice.device, width: Int(dimensions.width), height: Int(dimensions.height))
     }
 
     func stopRecording() {
@@ -144,6 +145,8 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
     }
     
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        print("Capture  seconds: \(CACurrentMediaTime()) presentation:\(presentationTime.seconds)")
         
         guard (frameRenderingSemaphore.wait(timeout:DispatchTime.now()) == DispatchTimeoutResult.success) else {
             return DbLog("Semaphore Error")
@@ -168,7 +171,7 @@ public class Camera: NSObject, ImageSource, AVCaptureVideoDataOutputSampleBuffer
                 let inputTexture = Texture(orientation: self.location.imageOrientation(), texture: cameraTexture)
                 let outputTexture = self.updateTargetsWithTexture(inputTexture)
                 if let videoRecorder = self.videoRecorder {
-                    videoRecorder.addFrame(outputTexture)
+                    videoRecorder.addFrame(outputTexture, presentTime: presentationTime)
                 }
             
                 // Benchmarking FPS

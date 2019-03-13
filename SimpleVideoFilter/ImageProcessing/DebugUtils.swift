@@ -61,7 +61,7 @@ func DbPrintProfileSummary(_ message: String = "", function: String = #function,
 }
 
 func DbAssert(_ isTrue: Bool, function: String = #function, line: Int = #line) {
-    if isTrue{
+    if !isTrue{
         DbLog("ASSERT FAILED", function: function, line: line)
     }
 }

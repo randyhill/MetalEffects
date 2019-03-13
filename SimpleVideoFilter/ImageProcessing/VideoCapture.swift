@@ -12,33 +12,27 @@ import Photos
 
 public struct VideoFrame {
     let cgImage: CGImage
-    let milliseconds: Int64
+    let presentTime: CMTime
+    let index: Int
 }
 
-public protocol VideoCaptureProtocol {
-    func getFirstFrame() -> VideoFrame?
-    func frameCount() -> Int
-}
-
-class VideoCapture: VideoCaptureProtocol {
+class VideoCapture {
     private class func videoSettings(width: Int, height: Int) -> [String: Any] {
         if Int(width) % 16 != 0 {
             DbLog("warning: video settings width must be divisible by 16")
         }
         
-        let videoSettings:[String: Any] = [AVVideoCodecKey: AVVideoCodecType.jpeg,
-                                           AVVideoWidthKey: width,
-                                           AVVideoHeightKey: height]
+        let videoSettings:[String: Any] = [AVVideoCodecKey: AVVideoCodecType.h264,  // not jpeg
+                                           AVVideoWidthKey: height,
+                                           AVVideoHeightKey: width]
         
         return videoSettings
     }
     static let VideoSaved = Notification.Name(rawValue: "VideoCapture.VideoSaved")
     var videoFrames = [VideoFrame]()
     var videoSettings: [String: Any]
-    var lastFrameTime: Date?
-    var writer: VideoWriter?
-    var section = 0
-    let syncQueue = DispatchQueue(label: "VideoCapture.Synchronization")
+    private let syncQueue = DispatchQueue(label: "VideoCapture.Synchronization")
+    private var isWriting = true
     private var metalDevice: MTLDevice
     private var context : CIContext
     private let videoWriter: VideoWriter
@@ -52,46 +46,38 @@ class VideoCapture: VideoCaptureProtocol {
             return nil
         }
         self.videoWriter = writer
-        videoWriter.delegate = self
+        self.startTime = CACurrentMediaTime()
+//        print("Start seconds: \(startTime)")
     }
     
-    func addFrame(_ newFrame: Texture) {
+    let startTime: Double
+    func addFrame(_ newFrame: Texture, presentTime: CMTime) {
         DbOnMainThread(false)
-        
-        // Calculate time since last frame
-        var msecs:Int64 = 0
-        if let lastTime = lastFrameTime {
-            let timeInterval = Date().timeIntervalSince(lastTime)
-            msecs = Int64(timeInterval*1000.0)
-        }
-        
-        // Save as CIImage to minimize processing time until it's saved.
-        let kciOptions = [kCIImageColorSpace: CGColorSpaceCreateDeviceRGB(),
-                          kCIContextOutputPremultiplied: true,
-                          kCIContextUseSoftwareRenderer: false] as [String : Any]
-        guard let ciImage = CIImage(mtlTexture: newFrame.texture, options: kciOptions) else {
-            return DbLog("Couldn't generate ci image")
-        }
-        guard let cgImage = convertCIImageToCGImage(inputImage: ciImage) else {
-            return DbLog("Couldn't generate cg image")
-        }
-        videoFrames.append(VideoFrame(cgImage: cgImage, milliseconds: msecs))
-        lastFrameTime = Date()
-        
-        writer?.writeVideoFramesToMovie([], section: 1, completion: { [weak self] (fileURL) in
-            self?.getCameraRollPermissions(fileURL: fileURL)
-        })
-        
-//        if videoFrames.count > 20, writer == nil {
-//            if let videoWriter = VideoWriter(videoSettings: videoSettings, timeScale: 1000, delegate: self) {
-//                writer = videoWriter
-//            } else {
-//                DbLog("VideoCapture:saveToDisk, could not create file saver")
-//            }
-//            writer?.writeVideoFramesToMovie([], section: 1, completion: { [weak self] (fileURL) in
-//                self?.getCameraRollPermissions(fileURL: fileURL)
-//            })
+//        guard presentTime.seconds > startTime else {
+//            return DbLog("Don't use frames that started before we inited")
 //        }
+        guard isWriting else {
+            return DbLog("Don't save frame, no longer writing")
+        }
+        print("Media seconds: \(CACurrentMediaTime()), presentTime: \(presentTime.seconds))")
+
+        _frameCount += 1
+        let frameIndex = _frameCount
+        syncQueue.sync {
+            // Save as CIImage to minimize processing time until it's saved.
+            let kciOptions = [kCIImageColorSpace: CGColorSpaceCreateDeviceRGB(),
+                              kCIContextOutputPremultiplied: true,
+                              kCIContextUseSoftwareRenderer: false] as [String : Any]
+            guard let ciImage = CIImage(mtlTexture: newFrame.texture, options: kciOptions) else {
+                return DbLog("Couldn't generate ci image")
+            }
+            guard let cgImage = self.convertCIImageToCGImage(inputImage: ciImage) else {
+                return DbLog("Couldn't generate cg image")
+            }
+            let secondsFromStart = presentTime.seconds - startTime
+            DbLog("Saving frame: \(frameIndex) at offset: \(secondsFromStart)")
+            self.videoWriter.writeVideoFrameToMovie(VideoFrame(cgImage: cgImage, presentTime: presentTime, index: frameIndex))
+        }
     }
     
     private func convertCIImageToCGImage(inputImage: CIImage) -> CGImage? {
@@ -103,32 +89,19 @@ class VideoCapture: VideoCaptureProtocol {
         return nil
     }
     
-    func addFrame(_ newFrame: VideoFrame) {
-//        syncQueue.async {
-            self.videoFrames.append(newFrame)
-//        }
-    }
-    
-    func getFirstFrame() -> VideoFrame? {
-        var firstFrame: VideoFrame?
-//        syncQueue.sync {
-            firstFrame = videoFrames.removeFirst()
-//        }
-        return firstFrame
-    }
-    
-    func frameCount() -> Int {
-        var count = 0
-//        syncQueue.sync {
-            count = videoFrames.count
-//        }
-        return count
+    var _frameCount = 0
+    private func frameCount() -> Int {
+        return _frameCount
     }
     
     func stopRecording() {
-        videoWriter.completeWriting { [weak self] (fileURl) in
-            DbLog("Finished writing file")
-            self?.getCameraRollPermissions(fileURL: fileURl)
+        syncQueue.sync {
+            self.isWriting = false
+            DbPrintProfileSummary("Finished writing: \(frameCount()) frames")
+            videoWriter.completeWriting { (fileURl) in
+                DbLog("Finished writing file")
+                self.getCameraRollPermissions(fileURL: fileURl)
+            }
         }
     }
     
@@ -146,17 +119,17 @@ class VideoCapture: VideoCaptureProtocol {
     private func _saveToCameraRoll(_ fileURL: URL) {
         DbOnMainThread(false)
         DbLog("Writing file to camera roll")
-        PHPhotoLibrary.shared().performChanges({
-            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
-        }) { saved, error in
-            if let error = error {
-                DbLog("Could not save video to library: \(error)")
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+            }) { saved, error in
+                if let error = error {
+                    DbLog("Could not save video to library: \(error)")
+                }
+                else if saved {
+                    NotificationCenter.default.post(Notification(name: VideoCapture.VideoSaved))
+                }  else {
+                    DbLog("weird error saving video to library")
+                }
             }
-            else if saved {
-                NotificationCenter.default.post(Notification(name: VideoCapture.VideoSaved))
-            }  else {
-                DbLog("weird error saving video to library")
-            }
-        }
     }
 }
