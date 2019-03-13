@@ -9,81 +9,97 @@
 import UIKit
 import AVFoundation
 import Photos
+import Accelerate
 
-struct VideoFrame {
-    let ciImage: CIImage
-    let milliseconds: Int64
+public struct VideoFrame {
+    let cgImage: CGImage
+    let presentTime: CMTime
+    let index: Int
 }
 
 class VideoCapture {
+    private class func videoSettings(width: Int, height: Int) -> [String: Any] {
+        if Int(width) % 16 != 0 {
+            DbLog("warning: video settings width must be divisible by 16")
+        }
+        
+        let videoSettings:[String: Any] = [AVVideoCodecKey: AVVideoCodecType.h264,  // not jpeg
+                                           AVVideoWidthKey: height,
+                                           AVVideoHeightKey: width]
+        
+        return videoSettings
+    }
     static let VideoSaved = Notification.Name(rawValue: "VideoCapture.VideoSaved")
-    var videoFrames = [VideoFrame]()
-    var fileURL : URL?
-    var lastTime: Date?
-    var frameSize = CGSize(width: 0, height: 0)
- 
-    func removeAll() {
-        videoFrames.removeAll()
+
+    private let syncQueue = DispatchQueue(label: "VideoCapture.Synchronization")
+    private var metalDevice: MTLDevice
+    private var context : CIContext
+    private let videoWriter: VideoWriter
+    private var frameCount = 0
+
+    init?(metalDevice: MTLDevice, width: Int, height: Int) {
+        self.metalDevice = metalDevice
+        self.context = CIContext(mtlDevice: metalDevice, options: nil)
+        let videoSettings = VideoCapture.videoSettings(width: width, height: height)
+        guard let writer = VideoWriter(videoSettings: videoSettings) else {
+            DbLog("Couldnt' create video writer")
+            return nil
+        }
+        self.videoWriter = writer
     }
     
-    func addFrame(_ newFrame: Texture, milliseconds: Int64) {
+    func addFrame(_ newFrame: Texture, presentTime: CMTime) {
         DbOnMainThread(false)
-        var msecs:Int64 = 0
-        if let lastTime = lastTime {
-            let timeInterval = Date().timeIntervalSince(lastTime)
-            msecs = Int64(timeInterval*1000.0)
-        }
-        let kciOptions = [kCIImageColorSpace: CGColorSpaceCreateDeviceRGB(),
-                          kCIContextOutputPremultiplied: true,
-                          kCIContextUseSoftwareRenderer: false] as [String : Any]
-        guard let ciImage = CIImage(mtlTexture: newFrame.texture, options: kciOptions) else {
-            return DbLog("VideoCapture:addFrame Couldn't generate ci image")
-        }
-        frameSize = CGSize(width: newFrame.texture.width, height: newFrame.texture.height)
-        let videoFrame = VideoFrame(ciImage: ciImage, milliseconds: msecs)
-        videoFrames.append(videoFrame)
-        lastTime = Date()
+        frameCount += 1
+        let frameIndex = frameCount
+        
+        syncQueue.sync {
+            DbProfilePoint()
+            let kciOptions = [kCIImageColorSpace: CGColorSpaceCreateDeviceRGB(),
+                              kCIContextOutputPremultiplied: true,
+                              kCIContextUseSoftwareRenderer: false] as [String : Any]
+            guard let ciImage = CIImage(mtlTexture: newFrame.texture, options: kciOptions) else {
+                return DbLog("Couldn't generate ci image")
+            }
+            DbProfilePoint()
+            guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+                return DbLog("Couldn't generate cg image")
+            }
+            DbProfilePoint()
+            self.videoWriter.writeVideoFrameToMovie(VideoFrame(cgImage: cgImage, presentTime: presentTime, index: frameIndex))
+            DbProfilePoint()
+         }
     }
     
-    // Also clears saved frames
-    var startSaveTime = Date()
-    func saveToDisk() {
-        DbOnMainThread(false)
-        guard videoFrames.count > 0 else {
-            return DbLog("VideoCapture:saveToDisk, Nothing to save")
-        }
-        startSaveTime = Date()
-        let width = Int(frameSize.width)
-        let height = Int(frameSize.height)
-        let videoSettings = ImagesToVideoUtils.videoSettings(width: width, height: height)
-        guard let fileSaver = ImagesToVideoUtils(videoSettings: videoSettings, timeScale: 1000) else {
-            return DbLog("VideoCapture:saveToDisk, could not create file saver")
-        }
-        fileSaver.createMovieFromVideoFrames(videoFrames) { (fileURL) in
-            self.fileURL = fileURL
-            self.videoFrames.removeAll()
-            PHPhotoLibrary.requestAuthorization { (status) in
-                switch status {
-                case .authorized:
-                    self.saveToCameraRoll(fileURL)
-                default:
-                    DbLog("Could not save video, no permissions given")
-               }
+    func stopRecording() {
+        DbPrintProfileSummary()
+        syncQueue.sync {
+            videoWriter.completeWriting { (fileURl) in
+                self.getCameraRollPermissions(fileURL: fileURl)
             }
         }
     }
     
-    func saveToCameraRoll(_ fileURL: URL) {
+    private func getCameraRollPermissions(fileURL: URL) {
+        PHPhotoLibrary.requestAuthorization { (status) in
+            switch status {
+            case .authorized:
+                self._saveToCameraRoll(fileURL)
+            default:
+                DbLog("Could not save video, no permissions given")
+            }
+        }
+    }
+    
+    private func _saveToCameraRoll(_ fileURL: URL) {
         DbOnMainThread(false)
-        PHPhotoLibrary.shared().performChanges({
+         PHPhotoLibrary.shared().performChanges({
             PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
         }) { saved, error in
             if let error = error {
                 DbLog("Could not save video to library: \(error)")
             }
             else if saved {
-                let saveTime = Date().timeIntervalSince(self.startSaveTime)
-                DbLog("Took \(saveTime) seconds to save")
                 NotificationCenter.default.post(Notification(name: VideoCapture.VideoSaved))
             }  else {
                 DbLog("weird error saving video to library")

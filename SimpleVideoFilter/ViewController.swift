@@ -61,7 +61,12 @@ class ViewController: UIViewController, CameraDelegate {
     }
 
     @IBAction func toggleRecording(_ sender: UIButton) {
-        camera.isRecording = !camera.isRecording
+        if camera.isRecording {
+            camera.stopRecording()
+        } else {
+            camera.startRecording()
+        }
+        
         let title = camera.isRecording ? "Stop Recording" : "Record Video"
         DispatchQueue.main.async {
             sender.setTitle(title, for: .normal)
