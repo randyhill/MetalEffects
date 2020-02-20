@@ -1,3 +1,11 @@
+//
+//  Color.swift
+//  MetalEffects
+//                  Color definitions for our implmentation
+//
+//  Created by Randy Hill on 3/12/19.
+//
+
 public struct Color {
     public let redComponent:Float
     public let greenComponent:Float

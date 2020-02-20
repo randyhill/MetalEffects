@@ -1,3 +1,10 @@
+//
+//  Matrix.swift
+//  MetalEffects
+//                  Matrices for translations of images.
+//
+//  Created by Randy Hill on 3/10/19.
+//
 import QuartzCore
 
 public struct Matrix4x4 {
@@ -92,7 +99,7 @@ func orthographicMatrix(_ left:Float, right:Float, bottom:Float, top:Float, near
 
 
 public extension Matrix4x4 {
-    public init (_ transform3D:CATransform3D) {
+    init (_ transform3D:CATransform3D) {
         self.m11 = Float(transform3D.m11)
         self.m12 = Float(transform3D.m12)
         self.m13 = Float(transform3D.m13)
@@ -114,7 +121,7 @@ public extension Matrix4x4 {
         self.m44 = Float(transform3D.m44)
     }
     
-    public init (_ transform:CGAffineTransform) {
+    init (_ transform:CGAffineTransform) {
         self.init(CATransform3DMakeAffineTransform(transform))
     }
 }

@@ -1,3 +1,8 @@
+//
+//  ContrastAdjustment.swift
+//  MetalEffects
+//
+
 public class ContrastAdjustment: BasicOperation {
     public var contrast:Float = 1.0 { didSet { uniformSettings["contrast"] = contrast } }
     

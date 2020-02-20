@@ -1,3 +1,10 @@
+//
+//  ImageOrientation.swift
+//  MetalEffects
+//                  Handle translations of Image orientations and rotations.
+//
+//  Created by Randy Hill on 3/10/19.
+//
 public enum ImageOrientation {
     case portrait
     case portraitUpsideDown

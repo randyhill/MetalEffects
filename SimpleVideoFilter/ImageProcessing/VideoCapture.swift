@@ -3,7 +3,6 @@
 //  MetalEffects
 //
 //  Created by Randy Hill on 3/9/19.
-//  Copyright © 2019 Red Queen Coder, LLC. All rights reserved.
 //
 
 import UIKit
@@ -55,9 +54,9 @@ class VideoCapture {
         
         syncQueue.sync {
             DbProfilePoint()
-            let kciOptions = [kCIImageColorSpace: CGColorSpaceCreateDeviceRGB(),
-                              kCIContextOutputPremultiplied: true,
-                              kCIContextUseSoftwareRenderer: false] as [String : Any]
+            let kciOptions = [CIImageOption.colorSpace: CGColorSpaceCreateDeviceRGB(),
+                              CIContextOption.outputPremultiplied: true,
+                              CIContextOption.useSoftwareRenderer: false] as! [CIImageOption : Any]
             guard let ciImage = CIImage(mtlTexture: newFrame.texture, options: kciOptions) else {
                 return DbLog("Couldn't generate ci image")
             }

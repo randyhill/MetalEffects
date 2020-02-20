@@ -1,3 +1,11 @@
+//
+//  Matrix.swift
+//  MetalEffects
+//                  Matrices for translations of images.
+//
+//  Created by Randy Hill on 3/10/19.
+//
+
 import Foundation
 import Metal
 
@@ -65,7 +73,7 @@ func generateRenderPipelineState(device:MetalRenderingDevice, vertexFunctionName
         if let fragmentArguments = reflection?.fragmentArguments {
             for fragmentArgument in fragmentArguments where fragmentArgument.type == .buffer {
                 if (fragmentArgument.bufferDataType == .struct) {
-                    for (index, uniform) in fragmentArgument.bufferStructType.members.enumerated() {
+                    for (index, uniform) in (fragmentArgument.bufferStructType?.members.enumerated())! {
                         uniformLookupTable[uniform.name] = (index, uniform.dataType)
                     }
                 }

@@ -1,3 +1,8 @@
+//
+//  OperationShaderTypes.h
+//  MetalEffects
+//
+
 #include <metal_stdlib>
 using namespace metal;
 

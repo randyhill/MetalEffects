@@ -1,3 +1,9 @@
+//
+//  BrightnessAdjustment.metal
+//  MetalEffects
+//
+
+
 #include <metal_stdlib>
 #include "OperationShaderTypes.h"
 

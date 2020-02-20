@@ -2,6 +2,11 @@
 using namespace metal;
 #include "BlendShaderTypes.h"
 
+//
+//  BlenderShaderTypes.metal
+//  MetalEffects
+//
+
 half lum(half3 c) {
     return dot(c, half3(0.3, 0.59, 0.11));
 }

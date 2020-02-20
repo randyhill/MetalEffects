@@ -1,3 +1,10 @@
+//
+//  Pipeline.swift
+//  MetalEffects
+//
+//  Created by Randy Hill on 3/10/19.
+//
+
 // MARK: -
 // MARK: Basic types
 import Foundation
@@ -21,7 +28,7 @@ public protocol ImageProcessingOperation: ImageConsumer, ImageSource {
 // MARK: Extensions and supporting types
 
 public extension ImageSource {
-    public func addTarget(_ target:ImageConsumer, atTargetIndex:UInt? = nil) {
+    func addTarget(_ target:ImageConsumer, atTargetIndex:UInt? = nil) {
         if let targetIndex = atTargetIndex {
             target.setSource(self, atIndex:targetIndex)
             targets.append(target, indexAtTarget:targetIndex)
@@ -34,14 +41,14 @@ public extension ImageSource {
         }
     }
 
-    public func removeAllTargets() {
+    func removeAllTargets() {
         for (target, index) in targets {
             target.removeSourceAtIndex(index)
         }
         targets.removeAll()
     }
     
-    public func updateTargetsWithTexture(_ texture:Texture) -> Texture {
+    func updateTargetsWithTexture(_ texture:Texture) -> Texture {
         var inputTexture = texture
         for (target, index) in targets {
             guard let outputTexture = target.newTextureAvailable(inputTexture, fromSourceIndex:index) else {
@@ -54,15 +61,15 @@ public extension ImageSource {
 }
 
 public extension ImageConsumer {
-    public func addSource(_ source:ImageSource) -> UInt? {
+    func addSource(_ source:ImageSource) -> UInt? {
         return sources.append(source, maximumInputs:maximumInputs)
     }
     
-    public func setSource(_ source:ImageSource, atIndex:UInt) {
+    func setSource(_ source:ImageSource, atIndex:UInt) {
         _ = sources.insert(source, atIndex:atIndex, maximumInputs:maximumInputs)
     }
 
-    public func removeSourceAtIndex(_ index:UInt) {
+    func removeSourceAtIndex(_ index:UInt) {
         sources.removeAtIndex(index)
     }
 }
