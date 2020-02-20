@@ -1,3 +1,11 @@
+//
+//  Camera.swift
+//  MetalEffects
+//                  Subclass of AVCaptureVideoDataOutputSampleBufferDelegate to handle our camera implementation.
+//
+//  Created by Randy Hill on 3/12/19.
+//
+
 import Foundation
 import AVFoundation
 import Metal

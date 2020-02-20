@@ -1,3 +1,10 @@
+//
+//  Position.swift
+//  MetalEffects
+//
+//  Created by Randy Hill on 3/10/19.
+//
+
 import Foundation
 
 #if os(iOS)

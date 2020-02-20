@@ -2,9 +2,6 @@
 //  GPUImage.h
 //  GPUImage
 //
-//  Created by Brad Larson on 6/17/2018.
-//  Copyright © 2018 Red Queen Coder, LLC. All rights reserved.
-//
 
 #import <UIKit/UIKit.h>
 

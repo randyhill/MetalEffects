@@ -1,3 +1,8 @@
+//
+//  BrightnessAdjustment.swift
+//  MetalEffects
+//
+
 public class BrightnessAdjustment: BasicOperation {
     public var brightness:Float = 0.0 { didSet { uniformSettings["brightness"] = brightness } }
     

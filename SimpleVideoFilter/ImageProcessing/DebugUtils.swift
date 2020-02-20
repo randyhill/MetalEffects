@@ -1,9 +1,9 @@
 //
 //  DebugUtils.swift
 //  MetalEffects
+//                  Logging/Assert functions to report unexpected situations and profile performance.
 //
 //  Created by Randy Hill on 3/10/19.
-//  Copyright © 2019 Red Queen Coder, LLC. All rights reserved.
 //
 
 import Foundation

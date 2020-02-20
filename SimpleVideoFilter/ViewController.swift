@@ -1,3 +1,12 @@
+//
+//  ViewController.swift
+//  MetalEffects
+//              Controller for camera view.
+//
+//  Created by Randy Hill on 3/10/19.
+//
+
+
 import UIKit
 import AVFoundation
 
@@ -27,6 +36,8 @@ class ViewController: UIViewController, CameraDelegate {
             }
             self.camera = camera
             camera.delegate = self
+            
+            // Attach targets in order of application to view
              // camera --> brightness --> saturation --> contrast --> renderView
             camera.addTarget(brightness)
             camera.addTarget(saturation)

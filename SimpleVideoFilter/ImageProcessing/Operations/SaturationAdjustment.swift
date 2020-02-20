@@ -1,3 +1,9 @@
+//
+//  BrightnestAdjustment.metal
+//  MetalEffects
+//
+
+
 public class SaturationAdjustment: BasicOperation {
     public var saturation:Float = 1.0 { didSet { uniformSettings["saturation"] = saturation } }
     

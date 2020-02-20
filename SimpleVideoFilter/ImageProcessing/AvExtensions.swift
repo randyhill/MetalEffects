@@ -1,9 +1,9 @@
 //
 //  AvExtensions.swift
 //  MetalEffects
+//                  AvCaptureDevice extensions to handle device formats/rates.
 //
 //  Created by Randy Hill on 3/12/19.
-//  Copyright © 2019 Red Queen Coder, LLC. All rights reserved.
 //
 
 import Foundation
@@ -49,8 +49,8 @@ extension AVCaptureDevice {
         }
         do {
             try lockForConfiguration()
-            activeVideoMinFrameDuration = CMTimeMake(1, Int32(frameRate))
-            activeVideoMaxFrameDuration = CMTimeMake(1, Int32(frameRate))
+            activeVideoMinFrameDuration = CMTimeMake(value: 1, timescale: Int32(frameRate))
+            activeVideoMaxFrameDuration = CMTimeMake(value: 1, timescale: Int32(frameRate))
             unlockForConfiguration()
         } catch {
             DbLog("LockForConfiguration failed with error: \(error.localizedDescription)")

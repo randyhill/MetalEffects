@@ -1,3 +1,11 @@
+//
+//  MetalRenderingDevice.swift
+//  MetalEffects
+//                  Describes device, commands and shaders being used.
+//
+//  Created by Randy Hill on 3/10/19.
+//
+
 import Foundation
 import Metal
 import MetalPerformanceShaders

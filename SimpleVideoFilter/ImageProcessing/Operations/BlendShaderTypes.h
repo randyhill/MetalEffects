@@ -1,3 +1,8 @@
+//
+//  BlenderShaderTypes.h
+//  MetalEffects
+//
+
 #ifndef BLENDSHADERTYPES_H
 #define BLENDSHADERTYPES_H
 

@@ -1,3 +1,11 @@
+//
+//  BasicOperation.swift
+//  MetalEffects
+//                  Subclass of ImageProcessingOperation to handle our specific implementation.
+//
+//  Created by Randy Hill on 3/12/19.
+//
+
 import Foundation
 import Metal
 
